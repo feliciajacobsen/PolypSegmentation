@@ -15,7 +15,7 @@ def get_mean_std(loader):
 
     channels_sum, channels_squared_sum, num_batches = 0, 0, 0
     
-    for data,_ in loader:
+    for data, _ in loader:
         channels_sum += torch.mean(data, dim=[0,2,3]) # don't sum across channel dim
         channels_squared_sum += torch.mean(data**2, dim=[0,2,3])
         num_batches += 1
@@ -24,10 +24,6 @@ def get_mean_std(loader):
     std = (channels_squared_sum/num_batches-mean**2)**0.5
 
     return mean, std
-"""
-_, train_loader = FashionMNIST_dataset(train=True)
-mean, std = get_mean_std(train_loader) 
-"""
 
 
 class PolypDataset(Dataset):
@@ -47,8 +43,8 @@ class PolypDataset(Dataset):
     def __getitem__(self, index):
         img_path = os.path.join(self.image_dir, self.images[index])
         mask_path = os.path.join(self.mask_dir, self.images[index])
-        image = np.array(Image.open(img_path).convert("RGB"))
-        mask = np.array(Image.open(mask_path).convert("L"), dtype = np.float32) # greyskale = L for PIL
+        image = np.array(Image.open(img_path, "r").convert("RGB"))
+        mask = np.array(Image.open(mask_path, "r").convert("L"), dtype = np.float32) # greyskale = L for PIL
         mask[mask==255.0] = 1.0 # 255 decimal code for white, change this to 1 due to sigmoid on output.
 
         if self.transform is not None:
