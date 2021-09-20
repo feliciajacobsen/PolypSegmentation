@@ -26,6 +26,20 @@ class UNET(nn.Module):
     def __init__(self, in_channels, out_channels, features):
         super(UNET, self).__init__()
 
+        """
+        Function perform one epoch on entire dataset and outputs loss for each batch.
+
+        Args:
+            in_channels (int): iterable-style dataset.
+
+            out_channels (int): provides with a forward method.
+
+            features (list): list containing integers of each individual feature size of encoder network
+
+        Returns:
+            Predicted .jpg-image of segmentation mask.
+        """
+
         self.ups = nn.ModuleList()
         self.downs = nn.ModuleList()
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
