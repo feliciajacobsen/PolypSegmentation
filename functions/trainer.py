@@ -5,6 +5,9 @@ from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim
 from model import UNET
+from dataloader import PolyDataset
+from torch.utils.data import DataLoader, random_split
+from src.main import UNET
 
 
 def train_model(loader, model, device, optimizer, criterion):
@@ -57,6 +60,24 @@ def train_model(loader, model, device, optimizer, criterion):
 
 
 
-
 if __name__ == "__main__":
-    pass
+    data_set = PolypDataset("~/data/Kvasir-SEG", "~/data/Kvasir-SEG/masks/")
+
+    train_set, test_set = random_split(data_set, [8,2])
+
+    train_loader = DataLoader(dataset=, batch_size=64, shuffle=True)
+    test_loader = DataLoader(dataset=, batch_size=64, shuffle=True)
+
+
+
+    model = UNET().to(device="gpu")
+
+    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+    criterion = nn.CrossEntropyLoss()
+    
+
+    print(f"Accuracy on training set: {train_eval:.2f}")
+
+
+
+
