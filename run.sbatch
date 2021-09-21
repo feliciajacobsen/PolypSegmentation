@@ -20,7 +20,9 @@ module load cuda11.0/fft/11.0.3
 module load cuda11.0/nsight/11.0.3
 module load cuda11.0/profiler/11.0.3
 module load cuda11.0/toolkit/11.0.3
-module load pytorch-extra-py37-cuda11.2-gcc8/1.8.1  
+# module load pytorch-extra-py37-cuda11.2-gcc8/1.8.1  
+
+source $HOME/.venv/bin/activate
 
 srun nvidia-smi
 hostname

@@ -5,6 +5,7 @@ from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim
 from model import UNET
+from src.dataloader import data_loader
 
 
 def train_model(loader, model, device, optimizer, criterion):
@@ -17,7 +18,7 @@ def train_model(loader, model, device, optimizer, criterion):
         optimizer (torch object): optimization algorithm. 
         criterion (torch oject): loss function with backward method.
     Returns:
-        float: mean loss over batches
+        None
     """
 
     tqdm_loader = tqdm(loader) # make progress bar
@@ -50,8 +51,6 @@ def train_model(loader, model, device, optimizer, criterion):
 
 
 
-
-
 if __name__ == "__main__":
     train_transforms = A.Compose(
         [
@@ -79,26 +78,12 @@ if __name__ == "__main__":
             ToTensorV2(),
         ],
     )
-    """
-    Here you can change the out_channels to number of classes 
-    and the loss function to cross entropy loss in order 
-    to extrend to a multi-class problem
-    """
+   
     model = UNET(in_channels=3, out_channels=1).to(device=config["device"])
     loss_fn = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
-    train_loader, val_loader = get_loaders(
-        config["train_img_dir"],
-        config["train_mask_dir"],
-        config["val_img_dir"],
-        config["val_mask_dir"],
-        config["batch_size"],
-        train_transforms,
-        val_transforms,
-        config["num_workers"],
-        config["pin_memory"],
-    )
+    
 
     if config["load_model"]:
         load_checkpoint(torch.load("my_checkpoint.pt"), model)

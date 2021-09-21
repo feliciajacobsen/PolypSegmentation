@@ -2,6 +2,7 @@ import os
 from PIL import Image
 from torch.utils.data import Dataset
 import numpy as np
+from torch.utils.data import DataLoader, random_split
 
 
 
@@ -32,6 +33,18 @@ class PolypDataset(Dataset):
             mask = augmentations["mask"]
 
         return image, mask
+
+def data_loader(train_frac, batch_size, train_or_test):
+    data_set = PolypDataset("~/data/Kvasir-SEG", "~/data/Kvasir-SEG/masks/")
+    train_set, test_set = random_split(
+        data_set, 
+        [floor(len(data_set*train_frac)),floor(len(data_set*(1.-train_frac)))]
+    )
+
+    if train_or_test=="train":
+        return DataLoader(train_set, batch_size=batch_size, shuffle=True)
+    else:
+        return DataLoader(test_set, batch_size=batch_size, shuffle=True)
 
 if __name__ == "__main__":
     PolypDataset("~/data/Kvasir-SEG", "~/data/Kvasir-SEG/masks/")
