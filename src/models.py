@@ -88,8 +88,9 @@ class UNET(nn.Module):
 
 
 def test():
-    x = torch.randn((3, 1, 160, 160))
-    model = UNET(in_channels=1, out_channels=1, features=[64,128,256,512])
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    x = torch.randn((3, 1, 160, 160)).to(device)
+    model = UNET(in_channels=1, out_channels=1, features=[64,128,256,512]).to(device)
     preds = model(x)
     print(preds.shape)
     print(x.shape)
