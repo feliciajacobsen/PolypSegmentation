@@ -2,8 +2,8 @@ import os
 from PIL import Image
 from torch.utils.data import Dataset
 import numpy as np
+import math
 from torch.utils.data import DataLoader, random_split
-
 
 
 class PolypDataset(Dataset):
@@ -24,7 +24,7 @@ class PolypDataset(Dataset):
         img_path = os.path.join(self.image_dir, self.images[index])
         mask_path = os.path.join(self.mask_dir, self.images[index])
         image = np.array(Image.open(img_path, "r").convert("RGB"))
-        mask = np.array(Image.open(mask_path, "r").convert("L"), dtype = np.float32) # greyskale = L for PIL
+        mask = np.array(Image.open(mask_path, "r").convert("L"), dtype = np.float32) # greyskale = L in PIL
         mask[mask==255.0] = 1.0 # 255 decimal code for white, change this to 1 due to sigmoid on output.
 
         if self.transform is not None:
@@ -34,23 +34,25 @@ class PolypDataset(Dataset):
 
         return image, mask
 
-def data_loader(train_frac, batch_size, train_or_test):
-    data_set = PolypDataset("~/data/Kvasir-SEG/images/", "~/data/Kvasir-SEG/masks/")
+def data_loader(train_frac, batch_size, train_or_test, pin_memory, transform=None):
+    data_set = PolypDataset("../../data/Kvasir-SEG/images/", "../../data/Kvasir-SEG/masks/", transform=transform)
 
-    train_size = int(len(data_set)*frac)
+    train_size = math.floor(len(data_set)*train_frac)
     test_size = len(data_set) - train_size  
     
     train_set, test_set = random_split(data_set, [train_size, test_size])
 
-    if train_or_test=="train":
-        return DataLoader(train_set, batch_size=batch_size, shuffle=True)
+    if train_or_test==True:
+        return DataLoader(train_set, batch_size=batch_size, pin_memory=pin_memory, shuffle=True)
     else:
-        return DataLoader(test_set, batch_size=batch_size, shuffle=True)
+        return DataLoader(test_set, batch_size=batch_size, pin_memory=pin_memory, shuffle=True)
+
 
 if __name__ == "__main__":
-    PolypDataset("~/data/Kvasir-SEG/images/", "~/data/Kvasir-SEG/masks/")
-    _, train_loader = data_loader(0.8, 64, "train")
+    PolypDataset(image_dir="../../data/Kvasir-SEG/images/", mask_dir="../../data/Kvasir-SEG/masks/")
+    
+    train_loader = data_loader(0.8, 64, True, False)
 
-    print(train_loader.shape)
+    print(len(train_loader))
 
 

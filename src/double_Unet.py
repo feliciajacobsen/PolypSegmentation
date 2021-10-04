@@ -248,7 +248,7 @@ class ASPP(nn.Module):
 
 class double_UNET(nn.Module):
     def __init__(self, in_channels, out_channels=64):
-        super(tot_model,self).__init__()
+        super(double_UNET,self).__init__()
         self.in_channels = in_channels 
         self.out_channels = out_channels
 
@@ -274,7 +274,6 @@ class double_UNET(nn.Module):
         outputs2 = output_block(in_channels=x.shape[1])(x)
 
         outputs = torch.cat([outputs1,outputs2], dim=1)
-        outputs = output_block(in_channels=2)(outputs)
 
         return outputs
 
@@ -282,6 +281,6 @@ class double_UNET(nn.Module):
 if __name__ == "__main__":
     x = torch.randn((2, 3, 256, 256)) # vil ikke funke hvis batchsize=1 pga batchnorm layers
     #x = torch.randn((12,3,128, 128))
-    model = tot_model(in_channels=3)
+    model = double_UNET(in_channels=3)
     preds = model(x)
     print(preds.shape)

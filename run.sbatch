@@ -13,14 +13,14 @@ ulimit -s 10240
 mkdir -p ~/output/g001
 
 module purge
-module load slurm/20.02.6
+module load slurm/20.02.7
 
 module load cuda11.0/blas/11.0.3
 module load cuda11.0/fft/11.0.3
 module load cuda11.0/nsight/11.0.3
 module load cuda11.0/profiler/11.0.3
 module load cuda11.0/toolkit/11.0.3
-# module load pytorch-extra-py37-cuda11.2-gcc8/1.8.1  
+module load pytorch-extra-py37-cuda11.2-gcc8/1.8.1  
 
 source $HOME/.venv/bin/activate
 

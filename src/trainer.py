@@ -6,7 +6,49 @@ import torch.nn as nn
 import torch.optim as optim
 from Unet import UNET
 from double_Unet import double_UNET
-from src.dataloader import data_loader
+from dataloader import data_loader
+
+def check_accuracy(loader, model, device="cuda"):
+    num_correct = 0
+    num_pixels = 0
+    dice_score = 0
+    model.eval()
+
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            y = y.to(device).unsqueeze(1)
+            preds = torch.sigmoid(model(x))
+            preds = (preds > 0.5).float()
+            num_correct += (preds == y).sum()
+            num_pixels += torch.numel(preds)
+            dice_score += (2 * (preds * y).sum()) / (
+                (preds + y).sum() + 1e-8
+            )
+
+    print(
+        f"Got {num_correct}/{num_pixels} with acc {num_correct/num_pixels*100:.2f}"
+    )
+    print(f"Dice score: {dice_score/len(loader)}")
+    model.train()
+
+
+
+def save_predictions_as_imgs(
+    loader, model, folder="saved_images/", device="cuda"
+):
+    model.eval()
+    for idx, (x, y) in enumerate(loader):
+        x = x.to(device=device)
+        with torch.no_grad():
+            preds = torch.sigmoid(model(x))
+            preds = (preds > 0.5).float()
+        torchvision.utils.save_image(
+            preds, f"{folder}/pred_{idx}.png"
+        )
+        torchvision.utils.save_image(y.unsqueeze(1), f"{folder}{idx}.png")
+
+    model.train()
 
 
 def train_model(loader, model, device, optimizer, criterion):
@@ -50,18 +92,17 @@ def train_model(loader, model, device, optimizer, criterion):
         # update loss
         losses.append(loss.item())
 
-        save_preds_as_imgs(
-            val_loader, model, folder="save_images/", device=config["device"]
-        )
+def run_model():
+    config = dict()
+    config["lr"] = 1e-4
+    config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    config["load_model"] = False
+    config["num_epochs"] = 10
+    config["batch_size"] = 64
+    config["pin_memory"] = False
 
-
-
-
-
-if __name__ == "__main__":
     train_transforms = A.Compose(
-        [
-            A.Resize(height=config["image_height"], width=config["image_width"]),
+        [   
             A.Rotate(limit=35, p=1.0),
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.1),
@@ -76,7 +117,6 @@ if __name__ == "__main__":
 
     val_transforms = A.Compose(
         [
-            A.Resize(height=config["image_height"], width=config["image_width"]),
             A.Normalize(
                 mean=[0.0,0.0,0.0],
                 std=[1.0,1.0,1.0],
@@ -86,18 +126,19 @@ if __name__ == "__main__":
         ],
     )
    
-    model = UNET(in_channels=3, out_channels=1).to(device=config["device"])
+    model = UNET(in_channels=3, out_channels=1, features=[64,128,256,512]).to(device=config["device"])
     loss_fn = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
-    
+    train_loader= data_loader(0.8, config["batch_size"], "train", config["pin_memory"], train_transforms)
+    val_loader = data_loader(0.8, config["batch_size"], "val", config["pin_memory"], val_transforms)
+
 
     if config["load_model"]:
         load_checkpoint(torch.load("my_checkpoint.pt"), model)
 
     check_accuracy(val_loader, model, device=config["device"])
 
-    scaler = torch.cuda.amp.GradScaler()
 
     for epoch in range(config["num_epochs"]):
         train_fn(train_loader, model, optimizer, loss_fn, scaler)
@@ -115,5 +156,10 @@ if __name__ == "__main__":
 
         # print examples to a folder
         save_preds_as_imgs(
-            val_loader, model, folder="save_images/", device=config["device"]
+            val_loader, model, folder="~/data/Kvasir-SEG/saved_images/", device=config["device"]
         )
+
+
+
+if __name__ == "__main__":
+    run_model()
