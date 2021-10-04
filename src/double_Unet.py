@@ -246,7 +246,7 @@ class ASPP(nn.Module):
         return y
 
 
-class tot_model(nn.Module):
+class double_UNET(nn.Module):
     def __init__(self, in_channels, out_channels=64):
         super(tot_model,self).__init__()
         self.in_channels = in_channels 

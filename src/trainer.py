@@ -4,7 +4,8 @@ from albumentations.pytorch import ToTensorV2
 from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim
-from model import UNET
+from Unet import UNET
+from double_Unet import double_UNET
 from src.dataloader import data_loader
 
 
@@ -19,7 +20,7 @@ def train_model(loader, model, device, optimizer, criterion):
         criterion (torch oject): loss function with backward method.
     Returns:
         None
-    """
+    """           
 
     tqdm_loader = tqdm(loader) # make progress bar
     scaler = torch.cuda.amp.GradScaler() # gradient scaling to prevent undeflow
@@ -48,6 +49,10 @@ def train_model(loader, model, device, optimizer, criterion):
         
         # update loss
         losses.append(loss.item())
+
+        save_preds_as_imgs(
+            val_loader, model, folder="save_images/", device=config["device"]
+        )
 
 
 
