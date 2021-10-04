@@ -51,6 +51,8 @@ def train_model(loader, model, device, optimizer, criterion):
 
 
 
+
+
 if __name__ == "__main__":
     train_transforms = A.Compose(
         [
