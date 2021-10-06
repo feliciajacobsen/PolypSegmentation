@@ -23,7 +23,7 @@ class DoubleConv(nn.Module):
 
 
 class UNET(nn.Module):
-    def __init__(self, in_channels, out_channels, features):
+    def __init__(self, in_channels, out_channels, features=[64,128,256,512]):
         super(UNET, self).__init__()
 
         """
@@ -90,7 +90,7 @@ class UNET(nn.Module):
 def test():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     x = torch.randn((3, 1, 160, 160)).to(device)
-    model = UNET(in_channels=1, out_channels=1, features=[64,128,256,512]).to(device)
+    model = UNET(in_channels=1, out_channels=1).to(device)
     preds = model(x)
     print(preds.shape)
     print(x.shape)

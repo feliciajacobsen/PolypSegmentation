@@ -1,9 +1,11 @@
 import os
+import torch
 from PIL import Image
 from torch.utils.data import Dataset
 import numpy as np
 import math
 from torch.utils.data import DataLoader, random_split
+from torch.nn.utils.rnn import pack_sequence, pad_sequence
 
 
 class PolypDataset(Dataset):
@@ -28,31 +30,50 @@ class PolypDataset(Dataset):
         mask[mask==255.0] = 1.0 # 255 decimal code for white, change this to 1 due to sigmoid on output.
 
         if self.transform is not None:
-            augmentations = self.transform(image=image, mask=mask)
-            image = augmentations["image"]
-            mask = augmentations["mask"]
+            image = self.transform(image)
+            mask = self.transform(mask)
 
         return image, mask
 
-def data_loader(train_frac, batch_size, train_or_test, pin_memory, transform=None):
-    data_set = PolypDataset("../../data/Kvasir-SEG/images/", "../../data/Kvasir-SEG/masks/", transform=transform)
 
-    train_size = math.floor(len(data_set)*train_frac)
+
+def data_loader(frac, batch_size, num_workers, pin_memory):
+    data_set = PolypDataset("/home/feliciaj/data/Kvasir-SEG/images/", "/home/feliciaj/data/Kvasir-SEG/masks/")
+
+    train_size = math.floor(len(data_set)*frac)
     test_size = len(data_set) - train_size  
     
     train_set, test_set = random_split(data_set, [train_size, test_size])
 
-    if train_or_test==True:
-        return DataLoader(train_set, batch_size=batch_size, pin_memory=pin_memory, shuffle=True)
-    else:
-        return DataLoader(test_set, batch_size=batch_size, pin_memory=pin_memory, shuffle=True)
+    def custom_collate_pad(batch):
+        data = pad_sequence([item[0] for item in batch])
+        target = pad_sequence([item[1] for item in batch])
+        return torch.Tensor(data), torch.Tensor(target)
+
+
+    train_loader = DataLoader(
+        train_set,
+        batch_size = batch_size,
+        num_workers = num_workers,
+        pin_memory = pin_memory,
+        shuffle = True,
+    )
+    
+    val_loader = DataLoader(
+        test_set,
+        batch_size = batch_size,
+        num_workers = num_workers,
+        pin_memory = pin_memory,
+        shuffle = True,
+    )
+    
+    return train_loader, val_loader
 
 
 if __name__ == "__main__":
-    PolypDataset(image_dir="../../data/Kvasir-SEG/images/", mask_dir="../../data/Kvasir-SEG/masks/")
+    PolypDataset(image_dir="/home/feliciaj/data/Kvasir-SEG/images/", mask_dir="/home/feliciaj/data/Kvasir-SEG/masks/")
+    train_loader, val_loader = data_loader(0.8, 64, num_workers=1, pin_memory=False)
+
+
     
-    train_loader = data_loader(0.8, 64, True, False)
-
-    print(len(train_loader))
-
 
