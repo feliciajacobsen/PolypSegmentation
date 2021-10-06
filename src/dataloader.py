@@ -30,15 +30,16 @@ class PolypDataset(Dataset):
         mask[mask==255.0] = 1.0 # 255 decimal code for white, change this to 1 due to sigmoid on output.
 
         if self.transform is not None:
-            image = self.transform(image)
-            mask = self.transform(mask)
+            augmentations = self.transform(image=image, mask=mask)
+            image = augmentations["image"]
+            mask = augmentations["mask"]
 
         return image, mask
 
 
 
-def data_loader(frac, batch_size, num_workers, pin_memory):
-    data_set = PolypDataset("/home/feliciaj/data/Kvasir-SEG/images/", "/home/feliciaj/data/Kvasir-SEG/masks/")
+def data_loader(frac, batch_size, num_workers, pin_memory, transform):
+    data_set = PolypDataset("/home/feliciaj/data/Kvasir-SEG/images/", "/home/feliciaj/data/Kvasir-SEG/masks/", transform)
 
     train_size = math.floor(len(data_set)*frac)
     test_size = len(data_set) - train_size  
@@ -72,7 +73,7 @@ def data_loader(frac, batch_size, num_workers, pin_memory):
 
 if __name__ == "__main__":
     PolypDataset(image_dir="/home/feliciaj/data/Kvasir-SEG/images/", mask_dir="/home/feliciaj/data/Kvasir-SEG/masks/")
-    train_loader, val_loader = data_loader(0.8, 64, num_workers=1, pin_memory=False)
+    #train_loader, val_loader = data_loader(0.8, 64, num_workers=1, pin_memory=False)
 
 
     

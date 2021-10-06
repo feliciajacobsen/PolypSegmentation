@@ -1,0 +1,21 @@
+Loading pytorch-extra-py37-cuda11.2-gcc8/1.8.1
+  Loading requirement: openblas/dynamic/0.3.7 hdf5_18/1.8.20 gcc8/8.4.0 python37
+    cuda11.2/toolkit/11.2.2 cudnn8.1-cuda11.2/8.1.1.33
+    ml-pythondeps-py37-cuda11.2-gcc8/4.5.3 nccl2-cuda11.2-gcc8/2.9.8
+    pytorch-py37-cuda11.2-gcc8/1.8.1
+  0%|          | 0/13 [00:00<?, ?it/s]  0%|          | 0/13 [00:01<?, ?it/s]
+Traceback (most recent call last):
+  File "/home/feliciaj/PolypSegmentation/src/trainer.py", line 146, in <module>
+    run_model()
+  File "/home/feliciaj/PolypSegmentation/src/trainer.py", line 125, in run_model
+    train_model(train_loader, model, config["device"], optimizer, criterion)
+  File "/home/feliciaj/PolypSegmentation/src/trainer.py", line 58, in train_model
+    loss = criterion(output, targets)
+  File "/cm/shared/apps/pytorch-py37-cuda11.2-gcc8/1.8.1/lib/python3.7/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/cm/shared/apps/pytorch-py37-cuda11.2-gcc8/1.8.1/lib/python3.7/site-packages/torch/nn/modules/loss.py", line 717, in forward
+    reduction=self.reduction)
+  File "/cm/shared/apps/pytorch-py37-cuda11.2-gcc8/1.8.1/lib/python3.7/site-packages/torch/nn/functional.py", line 2827, in binary_cross_entropy_with_logits
+    raise ValueError("Target size ({}) must be the same as input size ({})".format(target.size(), input.size()))
+ValueError: Target size (torch.Size([64, 240, 240])) must be the same as input size (torch.Size([64, 1, 240, 240]))
+srun: error: g001: task 0: Exited with exit code 1

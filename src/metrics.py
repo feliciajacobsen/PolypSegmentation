@@ -26,22 +26,7 @@ def check_accuracy(loader, model, device="cuda"):
     dice_score = 0
     model.eval()
 
-    with torch.no_grad():
-        for i, batch in enumerate(loader):
-            for item in range(len(loader)):
-                original_list, target_list = batch
-                original = original_list[item]
-                output = model(original)
-                preds = torch.sigmoid(output)
-                preds = (preds > 0.5).float()
-                num_correct += (preds == y).sum()
-                num_pixels += torch.numel(preds)
-                dice_score += (2 * (preds * y).sum()) / (
-                    (preds + y).sum() + 1e-8
-                )
-
-
-    """
+    
     with torch.no_grad():
         for batch, (x, y) in enumerate(loader):
             
@@ -54,7 +39,7 @@ def check_accuracy(loader, model, device="cuda"):
             dice_score += (2 * (preds * y).sum()) / (
                 (preds + y).sum() + 1e-8
             )
-    """
+    
     print(
         f"Got {num_correct}/{num_pixels} with acc {num_correct/num_pixels*100:.2f}"
     )

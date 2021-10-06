@@ -50,7 +50,7 @@ def train_model(loader, model, device, optimizer, criterion):
     for batch_idx, (data, targets) in enumerate(tqdm_loader):
         # move data and masks to same device as computed gradients
         data = data.to(device=device) 
-        targets = targets.float().to(device=device)
+        targets = targets.float().unsqueeze(1).to(device=device) # add on channel dimension of 1
 
         # mixed precision training
         with torch.cuda.amp.autocast():
@@ -78,8 +78,8 @@ def run_model():
     config["batch_size"] = 64
     config["pin_memory"] = True
     config["num_workers"] = 1
-    config["image_height"] = 384
-    config["image_width"] = 512
+    config["image_height"] = 240
+    config["image_width"] = 240
     
     train_transforms = A.Compose(
         [   A.Resize(height=config["image_height"], width=config["image_width"]),
@@ -112,12 +112,12 @@ def run_model():
     criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
-    train_loader, val_loader= data_loader(0.8, config["batch_size"], config["num_workers"], config["pin_memory"])
+    train_loader, val_loader= data_loader(0.8, config["batch_size"], config["num_workers"], config["pin_memory"], transform=val_transforms)
     
-
+    """
     if config["load_model"]:
         load_checkpoint(torch.load("my_checkpoint.pt"), model)
-
+    """
     check_accuracy(val_loader, model, device=config["device"])
 
 

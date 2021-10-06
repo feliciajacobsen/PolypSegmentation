@@ -1,0 +1,18 @@
+Loading pytorch-extra-py37-cuda11.2-gcc8/1.8.1
+  Loading requirement: openblas/dynamic/0.3.7 hdf5_18/1.8.20 gcc8/8.4.0 python37
+    cuda11.2/toolkit/11.2.2 cudnn8.1-cuda11.2/8.1.1.33
+    ml-pythondeps-py37-cuda11.2-gcc8/4.5.3 nccl2-cuda11.2-gcc8/2.9.8
+    pytorch-py37-cuda11.2-gcc8/1.8.1
+Traceback (most recent call last):
+  File "/home/feliciaj/PolypSegmentation/src/trainer.py", line 146, in <module>
+    run_model()
+  File "/home/feliciaj/PolypSegmentation/src/trainer.py", line 121, in run_model
+    check_accuracy(val_loader, model, device=config["device"])
+  File "/home/feliciaj/PolypSegmentation/src/metrics.py", line 35, in check_accuracy
+    preds = torch.sigmoid(model(x))
+  File "/cm/shared/apps/pytorch-py37-cuda11.2-gcc8/1.8.1/lib/python3.7/site-packages/torch/nn/modules/module.py", line 889, in _call_impl
+    result = self.forward(*input, **kwargs)
+  File "/home/feliciaj/PolypSegmentation/src/Unet.py", line 83, in forward
+    concat_skip = torch.cat((skip_connection, x), dim=1)
+RuntimeError: CUDA out of memory. Tried to allocate 6.00 GiB (GPU 0; 31.75 GiB total capacity; 11.93 GiB already allocated; 1.59 GiB free; 24.89 GiB reserved in total by PyTorch)
+srun: error: g001: task 0: Exited with exit code 1
