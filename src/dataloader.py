@@ -6,7 +6,7 @@ import numpy as np
 import math
 from torch.utils.data import DataLoader, random_split
 from torch.nn.utils.rnn import pack_sequence, pad_sequence
-
+torch.manual_seed(0)
 
 class PolypDataset(Dataset):
     """
@@ -38,9 +38,9 @@ class PolypDataset(Dataset):
 
 
 
-def data_loader(frac, batch_size, num_workers, pin_memory, transform):
+def data_loader(batch_size, num_workers, pin_memory, transform):
     data_set = PolypDataset("/home/feliciaj/data/Kvasir-SEG/images/", "/home/feliciaj/data/Kvasir-SEG/masks/", transform)
-
+    frac = 0.8
     train_size = math.floor(len(data_set)*frac)
     test_size = len(data_set) - train_size  
     

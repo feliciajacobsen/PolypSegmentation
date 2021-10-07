@@ -20,7 +20,7 @@ def iou_pytorch(outputs: torch.Tensor, labels: torch.Tensor):
     return thresholded  # Or thresholded.mean() if you are interested in average across the batch
 
 
-def check_accuracy(loader, model, device="cuda"):
+def check_accuracy(loader, model, device):
     num_correct = 0
     num_pixels = 0
     dice_score = 0

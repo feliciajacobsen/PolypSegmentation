@@ -5,10 +5,11 @@ from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim
 from Unet import UNET
-from double_Unet import double_UNET
+from double_Unet import double_UNET, double_UNET_2
 from dataloader import data_loader
 from metrics import check_accuracy
 
+from utils import load_checkpoint, save_checkpoint, save_preds_as_imgs
 
 
 def save_predictions_as_imgs(
@@ -74,21 +75,22 @@ def run_model():
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     config["load_model"] = False
-    config["num_epochs"] = 10
+    config["num_epochs"] = 50
+    config["numcl"] = 1
     config["batch_size"] = 64
     config["pin_memory"] = True
     config["num_workers"] = 1
     config["image_height"] = 240
     config["image_width"] = 240
-    
+   
     train_transforms = A.Compose(
         [   A.Resize(height=config["image_height"], width=config["image_width"]),
             A.Rotate(limit=35, p=1.0),
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.1),
             A.Normalize(
-                mean=[0.0,0.0,0.0],
-                std=[1.0,1.0,1.0],
+                mean=[0.5579, 0.3214, 0.2350],
+                std=[0.3185, 0.2218, 0.1875],
                 max_pixel_value=255.0,
             ),
             ToTensorV2(),
@@ -99,8 +101,8 @@ def run_model():
         [   
             A.Resize(height=config["image_height"], width=config["image_width"]),
             A.Normalize(
-                mean=[0.0,0.0,0.0],
-                std=[1.0,1.0,1.0],
+                mean=[0.5579, 0.3214, 0.2350],
+                std=[0.3185, 0.2218, 0.1875],
                 max_pixel_value=255.0,
             ),
             ToTensorV2(),
@@ -108,11 +110,16 @@ def run_model():
     )
     
    
-    model = UNET(in_channels=3, out_channels=1).to(config["device"])
+    model = UNET(in_channels=3, out_channels=config["numcl"]).to(config["device"])
     criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
-    train_loader, val_loader= data_loader(0.8, config["batch_size"], config["num_workers"], config["pin_memory"], transform=val_transforms)
+    train_loader, val_loader = data_loader(
+        batch_size=config["batch_size"], 
+        num_workers=config["num_workers"], 
+        pin_memory=config["pin_memory"], 
+        transform=val_transforms
+    )
     
     """
     if config["load_model"]:
@@ -134,10 +141,9 @@ def run_model():
         # check accuracy
         check_accuracy(val_loader, model, device=config["device"])
 
-
         # print examples to a folder
         save_preds_as_imgs(
-            val_loader, model, folder="~/data/Kvasir-SEG/saved_images/", device=config["device"]
+            val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/saved_images/", device=config["device"]
         )
 
 
