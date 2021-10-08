@@ -4,29 +4,13 @@ from albumentations.pytorch import ToTensorV2
 from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim
+
 from Unet import UNET
 from double_Unet import double_UNET, double_UNET_2
+from resunetplusplus import Res_Unet_Plus_Plus
+
 from dataloader import data_loader
-from metrics import check_accuracy
-
-from utils import load_checkpoint, save_checkpoint, save_preds_as_imgs
-
-
-def save_predictions_as_imgs(
-    loader, model, folder="saved_images/", device="cuda"
-):
-    model.eval()
-    for idx, (x, y) in enumerate(loader):
-        x = x.to(device)
-        with torch.no_grad():
-            preds = torch.sigmoid(model(x))
-            preds = (preds > 0.5).float()
-        torchvision.utils.save_image(
-            preds, f"{folder}/pred_{idx}.png"
-        )
-        torchvision.utils.save_image(y.unsqueeze(1), f"{folder}{idx}.png")
-
-    model.train()
+from utils import check_accuracy, load_checkpoint, save_checkpoint, save_preds_as_imgs
 
 
 def train_model(loader, model, device, optimizer, criterion):
@@ -75,7 +59,7 @@ def run_model():
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     config["load_model"] = False
-    config["num_epochs"] = 50
+    config["num_epochs"] = 300
     config["numcl"] = 1
     config["batch_size"] = 64
     config["pin_memory"] = True
@@ -110,8 +94,10 @@ def run_model():
     )
     
    
-    model = UNET(in_channels=3, out_channels=config["numcl"]).to(config["device"])
-    criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss 
+    #model = UNET(in_channels=3, out_channels=config["numcl"]).to(config["device"])
+    model = Res_Unet_Plus_Plus(in_channels=3).to(config["device"])
+    #model = double_UNET_2(in_channels=3, out_channels=64).to(config["device"])
+    criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
     train_loader, val_loader = data_loader(
@@ -121,10 +107,10 @@ def run_model():
         transform=val_transforms
     )
     
-    """
+    
     if config["load_model"]:
         load_checkpoint(torch.load("my_checkpoint.pt"), model)
-    """
+    
     check_accuracy(val_loader, model, device=config["device"])
 
 
@@ -143,7 +129,7 @@ def run_model():
 
         # print examples to a folder
         save_preds_as_imgs(
-            val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/saved_images/", device=config["device"]
+            val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/resunetplusplus_saved_images/", device=config["device"]
         )
 
 
