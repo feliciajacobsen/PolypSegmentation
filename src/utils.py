@@ -27,6 +27,23 @@ def get_mean_std(loader):
 
     return mean, std
 
+class BCEDiceLoss(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super().__init__()
+
+    def forward(self, input, target):
+        pred = input.view(-1)
+        truth = target.view(-1)
+
+        # BCE loss
+        bce_loss = nn.BCELoss()(pred, truth).double()
+
+        # Dice Loss
+        dice_coef = (2.0 * (pred * truth).double().sum() + 1) / (
+            pred.double().sum() + truth.double().sum() + 1
+        )
+
+        return bce_loss + (1 - dice_coef)
 
 
 def check_accuracy(loader, model, device):
@@ -34,7 +51,6 @@ def check_accuracy(loader, model, device):
     num_pixels = 0
     dice_score = 0
     model.eval()
-
     
     with torch.no_grad():
         for batch, (x, y) in enumerate(loader):
@@ -53,8 +69,6 @@ def check_accuracy(loader, model, device):
     )
     print(f"Dice score: {dice_score/len(loader)}")
     model.train()
-
-
 
 
 def save_checkpoint(state, filename="my_checkpoint.pt"):
@@ -83,7 +97,7 @@ def save_preds_as_imgs(loader, model, folder, device="cpu"):
             preds = torch.sigmoid(model(x)) 
             preds = (preds > 0.5).float() 
         torchvision.utils.save_image(preds, f"{folder}/pred_{idx}.png")
-        torchvision.utils.save_image(y.unsqueeze(1), f"{folder}/{idx}.png")
+        torchvision.utils.save_image(y.unsqueeze(1), f"{folder}/mask_{idx}.png")
 
     model.train()
 

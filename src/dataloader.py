@@ -4,8 +4,10 @@ from PIL import Image
 from torch.utils.data import Dataset
 import numpy as np
 import math
+import torchvision
 from torch.utils.data import DataLoader, random_split
 from torch.nn.utils.rnn import pack_sequence, pad_sequence
+import albumentations as A
 torch.manual_seed(0)
 
 class PolypDataset(Dataset):
@@ -46,12 +48,6 @@ def data_loader(batch_size, num_workers, pin_memory, transform):
     
     train_set, test_set = random_split(data_set, [train_size, test_size])
 
-    def custom_collate_pad(batch):
-        data = pad_sequence([item[0] for item in batch])
-        target = pad_sequence([item[1] for item in batch])
-        return torch.Tensor(data), torch.Tensor(target)
-
-
     train_loader = DataLoader(
         train_set,
         batch_size = batch_size,
@@ -71,9 +67,29 @@ def data_loader(batch_size, num_workers, pin_memory, transform):
     return train_loader, val_loader
 
 
+def store_split_data(loader, folder):
+    """
+    Function saves the predicted masks an stores in separate folder.
+    """
+    """
+    path = os.path.join(folder, "val_images")
+    os.makedirs(path)
+    path = os.path.join(folder, "val_masks")
+    os.makedirs(path)
+    """
+    # must get filename in some way
+
+    for idx, (img, mask) in enumerate(loader):
+        torchvision.utils.save_image(img, f"{folder}/val_images/{filename}.png")
+        torchvision.utils.save_image(mask, f"{folder}/val_masks/{filename}.png")
+
+
+
 if __name__ == "__main__":
     PolypDataset(image_dir="/home/feliciaj/data/Kvasir-SEG/images/", mask_dir="/home/feliciaj/data/Kvasir-SEG/masks/")
-    #train_loader, val_loader = data_loader(0.8, 64, num_workers=1, pin_memory=False)
+    #train_loader, val_loader = data_loader(64, num_workers=1, pin_memory=False, transform=transform)
+    #store_split_data(val_loader, "/home/feliciaj/data/Kvasir-SEG/")
+    #store_split_data(train_loader, "/home/feliciaj/data/Kvasir-SEG/")
 
 
     

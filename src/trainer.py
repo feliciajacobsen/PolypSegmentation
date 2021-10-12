@@ -10,10 +10,10 @@ from double_Unet import double_UNET, double_UNET_2
 from resunetplusplus import Res_Unet_Plus_Plus
 
 from dataloader import data_loader
-from utils import check_accuracy, load_checkpoint, save_checkpoint, save_preds_as_imgs
+from utils import check_accuracy, load_checkpoint, save_checkpoint, save_preds_as_imgs, BCEDiceLoss
 
 
-def train_model(loader, model, device, optimizer, criterion):
+def train_model(loader, model, device, optimizer, criterion, scheduler):
     """
     Function perform one epoch on entire dataset and outputs loss for each batch.
     Args:
@@ -27,25 +27,27 @@ def train_model(loader, model, device, optimizer, criterion):
     """           
 
     tqdm_loader = tqdm(loader) # make progress bar
-    scaler = torch.cuda.amp.GradScaler() # gradient scaling to prevent undeflow
 
     model.train()
     losses = []
+    scaler = torch.cuda.amp.GradScaler()
 
     for batch_idx, (data, targets) in enumerate(tqdm_loader):
         # move data and masks to same device as computed gradients
         data = data.to(device=device) 
         targets = targets.float().unsqueeze(1).to(device=device) # add on channel dimension of 1
 
-        # mixed precision training
         with torch.cuda.amp.autocast():
             output = model(data) 
             loss = criterion(output, targets)
 
+        if scheduler is not None:
+            scheduler.step()
+
         # backprop
-        optimizer.zero_grad()
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
+        optimizer.zero_grad() # zero out previous gradients
+        scaler.scale(loss).backward() # scale loss before backprop
+        scaler.step(optimizer) # update gradients
         scaler.update()
 
         # update tqdm loop
@@ -59,13 +61,13 @@ def run_model():
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     config["load_model"] = False
-    config["num_epochs"] = 300
+    config["num_epochs"] = 20
     config["numcl"] = 1
     config["batch_size"] = 64
     config["pin_memory"] = True
-    config["num_workers"] = 1
-    config["image_height"] = 240
-    config["image_width"] = 240
+    config["num_workers"] = 4
+    config["image_height"] = 256
+    config["image_width"] = 256
    
     train_transforms = A.Compose(
         [   A.Resize(height=config["image_height"], width=config["image_width"]),
@@ -96,9 +98,12 @@ def run_model():
    
     #model = UNET(in_channels=3, out_channels=config["numcl"]).to(config["device"])
     model = Res_Unet_Plus_Plus(in_channels=3).to(config["device"])
-    #model = double_UNET_2(in_channels=3, out_channels=64).to(config["device"])
-    criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
+    #criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
+    criterion = BCEDiceLoss()
+
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
+
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
 
     train_loader, val_loader = data_loader(
         batch_size=config["batch_size"], 
@@ -115,7 +120,7 @@ def run_model():
 
 
     for epoch in range(config["num_epochs"]):
-        train_model(train_loader, model, config["device"], optimizer, criterion)
+        train_model(train_loader, model, config["device"], optimizer, criterion, scheduler)
 
         # save model
         checkpoint = {
@@ -131,7 +136,6 @@ def run_model():
         save_preds_as_imgs(
             val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/resunetplusplus_saved_images/", device=config["device"]
         )
-
 
 
 if __name__ == "__main__":
