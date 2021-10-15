@@ -26,7 +26,7 @@ class conv_block(nn.Module):
             nn.BatchNorm2d(out_channels),
             nn.ReLU()
         )
-        self.SE = SE_Block(out_channels)
+        self.SE = SE_Block(out_channels, r=8)
 
     def forward(self, x):
         return self.SE(self.conv_block(x))

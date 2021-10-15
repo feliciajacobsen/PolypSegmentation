@@ -3,9 +3,10 @@ import torch.nn as nn
 
 
 
+
 class SE_Block(nn.Module):
     "credits: https://github.com/moskomule/senet.pytorch/blob/master/senet/se_module.py#L4"
-    def __init__(self, filters, r=8):
+    def __init__(self, filters, r=16):
         super(SE_Block, self).__init__()
         self.squeeze = nn.AdaptiveAvgPool2d(1) # squeeze each image to a single value for each channel
         self.excitation = nn.Sequential(

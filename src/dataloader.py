@@ -8,7 +8,10 @@ import torchvision
 from torch.utils.data import DataLoader, random_split
 from torch.nn.utils.rnn import pack_sequence, pad_sequence
 import albumentations as A
-torch.manual_seed(0)
+
+seed = 24
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
 
 class PolypDataset(Dataset):
     """
@@ -46,7 +49,7 @@ def data_loader(batch_size, num_workers, pin_memory, transform):
     train_size = math.floor(len(data_set)*frac)
     test_size = len(data_set) - train_size  
     
-    train_set, test_set = random_split(data_set, [train_size, test_size])
+    train_set, test_set = random_split(data_set, [train_size, test_size], generator=torch.Generator().manual_seed(seed))
 
     train_loader = DataLoader(
         train_set,
