@@ -6,7 +6,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from dataloader import data_loader
 
-
+from metrics import dice_coef, iou_score
 
 
 def get_mean_std(loader):
@@ -31,42 +31,7 @@ def get_mean_std(loader):
     return mean, std
 
 
-
-class BCEDiceLoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
-        super().__init__()
-
-    def forward(self, input, target):
-        pred = torch.sigmoid(input).view(-1)
-        truth = target.view(-1)
-
-        # BCE loss
-        bce_loss = nn.BCEWithLogitsLoss()(pred, truth).double() 
-
-        # Dice Loss
-        dice_coef = (2.0 * (pred * truth).double().sum() + 1) / (
-            pred.double().sum() + truth.double().sum() + 1
-        )
-
-        return bce_loss + (1 - dice_coef)
-
-
-def dice_coef(pred, target):
-
-    return (2.0 * (pred * target).double().sum() + 1) / (
-            pred.double().sum() + target.double().sum() + 1
-        )
-
-
-def iou_score(pred, target):
-    intersection = (pred*target).double().sum()
-    union = target.double().sum() + pred.double().sum() 
-
-    return (intersection + 1) / (union + 1)
-
-
-
-def check_accuracy(loader, model, device):
+def check_scores(loader, model, device, criterion):
     """
     Validate for one epoch. Prints accuracy and Dice/F1 score.
 
@@ -74,6 +39,7 @@ def check_accuracy(loader, model, device):
         loader (object): iterable-style dataset.
         model (class): provides with a forward method.
         device (cuda object): cpu or gpu.
+        criterion (function): scoring function.
 
     Returns:
         None
@@ -83,6 +49,7 @@ def check_accuracy(loader, model, device):
     num_pixels = 0
     dice = 0
     iou = 0
+    loss = []
 
     model.eval()
     with torch.no_grad():
@@ -95,6 +62,7 @@ def check_accuracy(loader, model, device):
             num_pixels += torch.numel(pred)
             dice += dice_coef(pred, y)
             iou += iou_score(pred, y)
+            loss.append(criterion(pred, y).item())
     
     print(
         f"Got {num_correct}/{num_pixels} with acc {num_correct/num_pixels*100:.2f}"
@@ -103,6 +71,8 @@ def check_accuracy(loader, model, device):
     print(f"Dice score: {dice/len(loader)}")
     
     model.train()
+
+    return sum(loss)/len(loader)
 
 
 
@@ -138,125 +108,37 @@ def save_preds_as_imgs(loader, model, folder, device="cpu"):
 
 
 
-class Plotter():
-    def __init__(self, modelParam, config):
-    
-        self.bestvalmeasure = None
-    
-        self.modelParam = modelParam
-        self.config = config
-        # plt.figure()
-        self.fig, self.ax = plt.subplots(1,2)
-        # if not self.modelParam['inNotebook']:
-        # plt.show()
-        self.fig.show()
-        sleep(0.1)
-        self.ax[0].set_ylabel("Loss")
-        self.ax[0].set_xlabel("epoch [#]")
 
-        # train_line = self.ax.plot([],[],color='blue', label='Train', marker='.', linestyle="")
-        # val_line   = self.ax.plot([], [], color='red', label='Validation', marker='.', linestyle="")
+class EarlyStopping():
+    """
+    Early stopping to stop the training when the loss does not improve after
+    certain epochs.
+    """
+    def __init__(self, patience=50, min_delta=0):
+        """
+        :param patience: how many epochs to wait before stopping when loss is
+               not improving
+        :param min_delta: minimum difference between new loss and old loss for
+               new loss to be considered as an improvement
+        """
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+    def __call__(self, val_loss):
+        if self.best_loss == None:
+            self.best_loss = val_loss
+        elif self.best_loss - val_loss > self.min_delta:
+            self.best_loss = val_loss
+        elif self.best_loss - val_loss < self.min_delta:
+            self.counter += 1
+            print(f"INFO: Early stopping counter {self.counter} of {self.patience}")
+            if self.counter >= self.patience:
+                print('INFO: Early stopping')
+                self.early_stop = True
 
-        train_line = self.ax[0].plot([],[],color="blue", label="Train", marker=".", linestyle="")
-        val_line   = self.ax[0].plot([], [], color="red", label="Validation", marker=".", linestyle="")
-        self.ax[0].legend(handles=[train_line[0], val_line[0]])
-        self.ax[0].set_axisbelow(True)
-        self.ax[0].grid()
-        self.ax[0].set_ylim([0, 5])
-        self.ax[1].grid()
-        self.ax[1].set_ylim([0, 0.39])
-        sleep(0.1)
-        return
 
-
-    def update(self, current_epoch, loss, mode):
-        if mode=='train':
-            color = 'b'
-        else:
-            color = 'r'
-
-        if self.modelParam['inNotebook']:
-            self.ax[0].scatter(current_epoch, loss, c=color)
-            self.ax[0].set_ylim(bottom=0, top=self.ax[0].get_ylim()[1])
-            self.fig.canvas.draw()
-            sleep(0.1)
-        else:
-            self.ax[0].scatter(current_epoch, loss, c=color)
-            self.ax[0].set_ylim(bottom=0, top=self.ax[0].get_ylim()[1])
-            self.fig.canvas.draw()
-            sleep(0.1)
-            self.save()
-        return
-        
-    def update_withval(self, current_epoch, loss, valmeasure, mode):
-        if mode=="train":
-            color = "b"
-        else:
-            color = "r"
-
-        if self.bestvalmeasure is None:
-          self.bestvalmeasure = valmeasure
-        elif self.bestvalmeasure < valmeasure :
-          self.bestvalmeasure = valmeasure
-        print("\n\n\ncurrent best val measure and current valmeasure ",self.bestvalmeasure, valmeasure)
-
-        if self.modelParam["inNotebook"]:
-            self.ax[0].scatter(current_epoch, loss, c=color)
-            self.ax[0].set_ylim(bottom=0, top=self.ax[0].get_ylim()[1])
-            
-            self.ax[1].scatter(current_epoch, valmeasure, c='r')
-            self.ax[1].set_ylim(bottom=0, top=self.ax[1].get_ylim()[1])
-            
-            self.fig.canvas.draw()
-            sleep(0.1)
-        else:
-            self.ax[0].scatter(current_epoch, loss, c=color)
-            self.ax[0].set_ylim(bottom=0, top=self.ax[0].get_ylim()[1])
-            
-            self.ax[1].scatter(current_epoch, valmeasure, c='r')
-            self.ax[1].set_ylim(bottom=0, top=0.5)
-            
-            self.fig.canvas.draw()
-            sleep(0.1)
-            self.save()
-        return
-
-    def save(self):
-        # path = self._getPath()
-        pt = "./loss_images/"
-        if not os.path.isdir(pt):
-          os.makedirs(pt)
-        path = pt+self.modelParam["modelName"][:-1]
-        self.fig.savefig(path+".png")
-        return
-
-    def _getPath(self):
-        keys = self.config.keys()
-        path = "loss_images/"
-        first=1
-        for key in keys:
-            if first!=1:
-                path += "_"
-            else:
-                first=0
-            element = self.config[key]
-            if isinstance(element, str):
-                path += element
-            elif isinstance(element, int):
-                path += key+str(element)
-            elif isinstance(element, float):
-                path += key+str(element)
-            elif isinstance(element, list):
-                path += ""
-                for elm in element:
-                    path += str(elm)
-            elif isinstance(element, dict):
-                path += ""
-                for elKey, elVal in element.items():
-                    path += str(elKey) + str(elVal).replace(".", "_")
-            else:
-                raise Exception("Unknown element in config")
-        return path
 
 
 if __name__ == "__main__":

@@ -7,12 +7,23 @@ import torch.optim as optim
 import copy
 
 from Unet import UNET
-from double_Unet import double_UNET, double_UNET_2
+from double_Unet import double_UNET
 from resunetplusplus import Res_Unet_Plus_Plus
 from test import DoubleUNet
 
 from dataloader import data_loader
-from utils import check_accuracy, load_checkpoint, save_checkpoint, save_preds_as_imgs, BCEDiceLoss, Plotter
+from utils import (
+    check_scores, 
+    load_checkpoint, 
+    save_checkpoint, 
+    save_preds_as_imgs,  
+    EarlyStopping
+)
+
+from metrics import (
+    BCEDiceLoss,
+    DiceLoss
+)
 
 
 def train_model(loader, model, device, optimizer, criterion, scheduler):
@@ -53,11 +64,11 @@ def train_model(loader, model, device, optimizer, criterion, scheduler):
         scaler.scale(loss).backward() # scale loss before backprop
         scaler.step(optimizer) # update gradients
         scaler.update() # update scale factor
-
+        """
         mean_loss = sum(losses)/len(losses)
         if scheduler is not None:
             scheduler.step(mean_loss)
-
+        """
         # update tqdm loop
         tqdm_loader.set_postfix(loss=loss.item())
         
@@ -112,7 +123,9 @@ def run_model():
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
     #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
-    scheduler = None #optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5, patience=10, verbose=True) 
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=20, verbose=True) 
+
+    early_stopping = EarlyStopping()
 
     train_loader, val_loader = data_loader(
         batch_size=config["batch_size"], 
@@ -125,7 +138,7 @@ def run_model():
     if config["load_model"]:
         load_checkpoint(torch.load("./my_checkpoint.pt"), model)
     
-    check_accuracy(val_loader, model, device=config["device"])
+    #check_scores(val_loader, model, device=config["device"])
 
     for epoch in range(config["num_epochs"]):
         # train on training data, prints accuracy and dice score of training data
@@ -138,8 +151,15 @@ def run_model():
         }
         save_checkpoint(checkpoint)
 
-        # check accuracy
-        check_accuracy(val_loader, model, device=config["device"])
+        # check validation loss
+        mean_val_loss = check_scores(val_loader, model, config["device"], criterion)
+
+        early_stopping(mean_val_loss)
+        if early_stopping.early_stop:
+            break
+
+        if scheduler is not None:
+            scheduler.step(mean_val_loss)
 
         # print examples to a folder
         save_preds_as_imgs(
