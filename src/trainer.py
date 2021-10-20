@@ -4,13 +4,13 @@ from albumentations.pytorch import ToTensorV2
 from tqdm import tqdm
 import torch.nn as nn
 import torch.optim as optim
-import copy
+import matplotlib.pyplot as plt
 
+# Local imports
 from Unet import UNET
 from double_Unet import double_UNET
 from resunetplusplus import Res_Unet_Plus_Plus
 from test import DoubleUNet
-
 from dataloader import data_loader
 from utils import (
     check_scores, 
@@ -64,13 +64,16 @@ def train_model(loader, model, device, optimizer, criterion, scheduler):
         scaler.scale(loss).backward() # scale loss before backprop
         scaler.step(optimizer) # update gradients
         scaler.update() # update scale factor
+        
+        
         """
-        mean_loss = sum(losses)/len(losses)
         if scheduler is not None:
             scheduler.step(mean_loss)
         """
         # update tqdm loop
         tqdm_loader.set_postfix(loss=loss.item())
+
+    return sum(losses)/len(loader)
         
 
 def run_model():
@@ -113,12 +116,13 @@ def run_model():
     )
     
    
-    #model = UNET(in_channels=3, out_channels=config["numcl"]).to(config["device"])
+    model = UNET(in_channels=3, out_channels=config["numcl"]).to(config["device"])
     #model = Res_Unet_Plus_Plus(in_channels=3).to(config["device"])
-    model = DoubleUNet().to(config["device"])
+    #model = DoubleUNet().to(config["device"])
 
     #criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
-    criterion = BCEDiceLoss() # Sigmoid layer and Dice loss
+    #criterion = BCEDiceLoss() # Sigmoid layer and Dice loss
+    criterion = DiceLoss()
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
@@ -140,9 +144,12 @@ def run_model():
     
     #check_scores(val_loader, model, device=config["device"])
 
+    val_epoch_loss = []
+    train_epoch_loss = []
+
     for epoch in range(config["num_epochs"]):
         # train on training data, prints accuracy and dice score of training data
-        train_model(train_loader, model, config["device"], optimizer, criterion, scheduler)
+        mean_train_loss = train_model(train_loader, model, config["device"], optimizer, criterion, scheduler)
 
         # save model
         checkpoint = {
@@ -154,17 +161,30 @@ def run_model():
         # check validation loss
         mean_val_loss = check_scores(val_loader, model, config["device"], criterion)
 
-        early_stopping(mean_val_loss)
-        if early_stopping.early_stop:
-            break
+        if early_stopping is not None:
+            early_stopping(mean_val_loss)
+            if early_stopping.early_stop:
+                break
 
         if scheduler is not None:
             scheduler.step(mean_val_loss)
 
+        val_epoch_loss.append(mean_val_loss)
+        train_epoch_loss.append(mean_train_loss)
+
         # print examples to a folder
         save_preds_as_imgs(
-            val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/doubleunet_test/", device=config["device"]
+            val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/unet_diceloss/", device=config["device"]
         )
+    
+    loss_plot_name = "loss_unet"
+    plt.figure(figsize=(10, 7))
+    plt.plot(train_epoch_loss, color='orange', label="train loss")
+    plt.plot(val_epoch_loss, color="red", label="validataion loss")
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.legend()
+    plt.savefig(f"/home/feliciaj/PolypSegmentation/src/{loss_plot_name}.png")
         
 
 if __name__ == "__main__":

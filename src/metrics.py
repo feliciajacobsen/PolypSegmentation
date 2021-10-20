@@ -4,7 +4,15 @@ import torch.nn as nn
 
 
 class BCEDiceLoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
+    """
+    Args:
+        weight: An array of shape [num_classes,]
+        input: A tensor of shape [N, num_classes, *]
+        target: A tensor of shape same with input
+    Return:
+        Loss tensor
+    """
+    def __init__(self, weight=None):
         super().__init__()
 
     def forward(self, input, target):
@@ -21,8 +29,18 @@ class BCEDiceLoss(nn.Module):
 
         return bce_loss + (1 - dice_coef)
 
+
+
 class DiceLoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
+    """
+    Args:
+        weight: An array of shape [num_classes,]
+        input: A tensor of shape [N, num_classes, *]
+        target: A tensor of shape same with input
+    Return:
+        Loss tensor
+    """
+    def __init__(self, weight=None):
         super().__init__()
     
     def forward(self, input,target):
@@ -39,13 +57,11 @@ class DiceLoss(nn.Module):
 
 
 def dice_coef(pred, target):
-    """
-    Dice coefficient used as metric.
-    """
     intersection = (pred*target).double().sum()
     union = pred.double().sum() + target.double().sum()
 
     return (2.0 * intersection + 1) / (union + 1)
+
 
 
 def iou_score(pred, target):

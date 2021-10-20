@@ -25,17 +25,11 @@ class DoubleConv(nn.Module):
 class UNET(nn.Module):
     def __init__(self, in_channels, out_channels, features=[64,128,256,512]):
         super(UNET, self).__init__()
-
         """
-        Function perform one epoch on entire dataset and outputs loss for each batch.
-
         Args:
             in_channels (int): iterable-style dataset.
-
             out_channels (int): provides with a forward method.
-
             features (list): list containing integers of each individual feature size of encoder network
-
         Returns:
             Predicted .jpg-image of segmentation mask.
         """
@@ -61,6 +55,7 @@ class UNET(nn.Module):
         self.bottleneck = DoubleConv(features[-1], features[-1]*2)
         self.final_conv = nn.Conv2d(features[0], out_channels, kernel_size=1)
 
+
     def forward(self, x):
         skip_connections = []
 
@@ -84,7 +79,6 @@ class UNET(nn.Module):
             x = self.ups[idx+1](concat_skip)
 
         return self.final_conv(x)
-
 
 
 def test():

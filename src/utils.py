@@ -33,7 +33,7 @@ def get_mean_std(loader):
 
 def check_scores(loader, model, device, criterion):
     """
-    Validate for one epoch. Prints accuracy and Dice/F1 score.
+    Validate for one epoch. Prints accuracy, Dice/F1 and IoU score.
 
     Args:
         loader (object): iterable-style dataset.
@@ -42,8 +42,7 @@ def check_scores(loader, model, device, criterion):
         criterion (function): scoring function.
 
     Returns:
-        None
-
+        Mean loss over training data.
     """
     num_correct = 0
     num_pixels = 0
