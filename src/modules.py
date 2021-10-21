@@ -114,6 +114,19 @@ class Res_Conv(nn.Module):
 
 
 
+class Res_Shortcut(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=(1,1)),
+            nn.BatchNorm2d(out_channels)
+        )
+
+    def forward(self, x):
+        return self.conv(x)
+
+
+
 class Attention_Block(nn.Module):
     def __init__(self, input_encoder, input_decoder, out_channels):
         super(Attention_Block, self).__init__()

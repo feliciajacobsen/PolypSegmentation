@@ -46,10 +46,10 @@ class first_encoder(nn.Module):
         # extract features from each block except last
         for ii, model in enumerate(self.features): 
             x = model(x)
-            if ii in {3, 8, 17, 26}: # pre-pooled output features 
+            if ii in {3, 11, 18, 31}: # pre-pooled output features 
                 skip_connections.append(x)
         # get output feature from vgg19
-        output = self.features[-1](x)
+        output = self.features[37](x)
 
         return output, skip_connections
 
@@ -133,10 +133,8 @@ class second_decoder(nn.Module):
 class output_block(nn.Module):
     def __init__(self, in_channels, out_channels=1):
         super(output_block, self).__init__()
-        self.block = nn.Sequential(
-            Conv2dSamePadding(in_channels, out_channels, kernel_size=1),
-            nn.Sigmoid()
-        )
+        self.conv = Conv2dSamePadding(in_channels, out_channels, kernel_size=1)
+
     def forward(self, x):
         return self.block(x)
 
@@ -224,6 +222,8 @@ class double_UNET(nn.Module):
         outputs2 = output_block(in_channels=x.shape[1])(x)
 
         outputs = torch.cat([outputs1,outputs2], dim=1)
+
+        outputs = output_block(in_channels=2)(outputs)
 
         return outputs
 

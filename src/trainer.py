@@ -81,7 +81,7 @@ def run_model():
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     config["load_model"] = False
-    config["num_epochs"] = 300
+    config["num_epochs"] = 3
     config["numcl"] = 1
     config["batch_size"] = 64
     config["pin_memory"] = True
@@ -116,9 +116,9 @@ def run_model():
     )
     
    
-    model = UNET(in_channels=3, out_channels=config["numcl"]).to(config["device"])
+    #model = UNET(in_channels=3, out_channels=config["numcl"]).to(config["device"])
     #model = Res_Unet_Plus_Plus(in_channels=3).to(config["device"])
-    #model = DoubleUNet().to(config["device"])
+    model = DoubleUNet().to(config["device"])
 
     #criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
     #criterion = BCEDiceLoss() # Sigmoid layer and Dice loss
@@ -129,7 +129,7 @@ def run_model():
     #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=20, verbose=True) 
 
-    early_stopping = EarlyStopping()
+    early_stopping = None #EarlyStopping()
 
     train_loader, val_loader = data_loader(
         batch_size=config["batch_size"], 
@@ -173,18 +173,18 @@ def run_model():
         train_epoch_loss.append(mean_train_loss)
 
         # print examples to a folder
-        save_preds_as_imgs(
-            val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/unet_diceloss/", device=config["device"]
-        )
+        #save_preds_as_imgs(
+        #    val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/doubleunet/", device=config["device"]
+        #)
     
-    loss_plot_name = "loss_unet"
+    loss_plot_name = "loss_doubleunet"
     plt.figure(figsize=(10, 7))
-    plt.plot(train_epoch_loss, color='orange', label="train loss")
-    plt.plot(val_epoch_loss, color="red", label="validataion loss")
+    plt.plot(train_epoch_loss, color="blue", label="train loss")
+    plt.plot(val_epoch_loss, color="green", label="validataion loss")
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.legend()
-    plt.savefig(f"/home/feliciaj/PolypSegmentation/src/{loss_plot_name}.png")
+    #plt.savefig(f"/home/feliciaj/PolypSegmentation/src/{loss_plot_name}.png")
         
 
 if __name__ == "__main__":

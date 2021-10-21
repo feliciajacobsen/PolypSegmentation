@@ -61,7 +61,7 @@ def check_scores(loader, model, device, criterion):
             num_pixels += torch.numel(pred)
             dice += dice_coef(pred, y)
             iou += iou_score(pred, y)
-            loss.append(criterion(pred, y).item())
+            loss.append(criterion(model(x), y).item())
     
     print(
         f"Got {num_correct}/{num_pixels} with acc {num_correct/num_pixels*100:.2f}"
