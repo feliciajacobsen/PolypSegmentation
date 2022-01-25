@@ -130,7 +130,7 @@ def run_model():
 
     early_stopping = None #EarlyStopping()
 
-    train_loader, val_loader = data_loader(
+    train_loader, val_loader, test_loader = data_loaders(
         batch_size=config["batch_size"], 
         num_workers=config["num_workers"], 
         pin_memory=config["pin_memory"], 

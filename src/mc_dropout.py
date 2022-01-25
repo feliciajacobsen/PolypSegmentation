@@ -15,7 +15,9 @@ from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
 from unet import UNet_dropout, UNet
 
-from utils import data_loaders, save_preds_as_imgs, check_scores
+from dataloader import data_loaders
+
+from utils import check_scores, save_grid
 from metrics import dice_coef, iou_score, DiceLoss
 
 
@@ -44,7 +46,7 @@ class UNetClassifier():
 
         for epoch in range(self.max_epoch):
             if self.scheduler is not None:
-            self.scheduler.step(mean_val_loss)
+                self.scheduler.step(mean_val_loss)
             for i, data in enumerate(tqdm_loader):
                 targets, labels = data
                 targets, labels = Variable(targets).cuda(), Variable(labels).cuda()
@@ -135,8 +137,6 @@ def get_monte_carlo_predictions(loader,forward_passes,model,n_classes,n_samples,
 
     # Calculating variance across forward passes
     variance = np.var(dropout_preds, axis=0) # shape (n_samples, n_classes)
-
-
 
 
 

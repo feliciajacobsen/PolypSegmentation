@@ -13,7 +13,7 @@ seed = 24
 torch.manual_seed(seed)
 torch.cuda.manual_seed_all(seed)
 
-class PolypDataset(Dataset):
+class KvasirSEGDataset(Dataset):
     """
     Class provides with image and mask, or alternatively
     give an transformed/augmented version of these.
@@ -148,11 +148,11 @@ def move_images():
         )
 
 
+
 if __name__ == "__main__":
+    #move_images() # only run this once to split data
     PolypDataset(image_dir="/home/feliciaj/data/Kvasir-SEG/images/", mask_dir="/home/feliciaj/data/Kvasir-SEG/masks/")
-    #train_loader, val_loader = data_loader(64, num_workers=1, pin_memory=False, transform=transform)
-    #store_split_data(val_loader, "/home/feliciaj/data/Kvasir-SEG/")
-    #store_split_data(train_loader, "/home/feliciaj/data/Kvasir-SEG/")
+   
 
 
     
