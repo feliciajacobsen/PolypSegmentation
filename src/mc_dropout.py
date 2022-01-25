@@ -81,8 +81,6 @@ class UNetClassifier():
         return pred
 
 
-
-
 def enable_dropout(model):
     """ 
     Function to enable the dropout layers during test-time 
@@ -190,7 +188,7 @@ def run_model():
             ]
             
     # Training, set verbose=True to see loss after each epoch.
-    [unet.fit(train_loader, val_loader,verbose=True) for unet in unets]
+    [unet.fit(train_loader, val_loader, verbose=True) for unet in unets]
 
     # Save trained models
     for idx, unet in enumerate(unets):
@@ -207,7 +205,7 @@ def run_model():
     unet_models = [torch.load(save_model_path+"unet_"+str(idx)+".pt", map_location={'cuda:0': 'cpu'}) for idx in [0,1]]
 
     # Load saved test errors to plot figures.
-    unet_test_dices = [error_array.split(",") for error_array in open("unet_test_dices.txt","r").read().split("\n")]
+    unet_test_dices = [array.split(",") for array in open("unet_test_dices.txt","r").read().split("\n")]
     unet_test_dices = np.array(unet_test_dices,dtype="f")
 
     labels = ["UNet no dropout","UNet with 30%% dropout","UNet with 50%% dropout"]

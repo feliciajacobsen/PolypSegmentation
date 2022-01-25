@@ -60,7 +60,7 @@ def validate_ensembles():
 
     """
     save_folder = "/home/feliciaj/PolypSegmentation/ensembles/"
-    load_folder = "home/feliciaj/PolypSegmentation/saved_models/unet/"
+    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/unet/"
 
     val_transforms = A.Compose(
         [   
