@@ -86,6 +86,8 @@ def run_model():
     config["num_workers"] = 4
     config["image_height"] = 256
     config["image_width"] = 256
+    config["model_name"] = "unet"
+    config["save_folder"] = "/home/feliciaj/PolypSegmentation/saved_models/" + config["model_name"] + "/"
    
     train_transforms = A.Compose(
         [   A.Resize(height=config["image_height"], width=config["image_width"]),
@@ -139,8 +141,7 @@ def run_model():
 
     
     if config["load_model"]:
-        load_checkpoint(torch.load("./my_checkpoint.pt"), model)
-    
+        load_checkpoint(torch.load("./checkpoint_1.pt"), model)
     #check_scores(val_loader, model, device=config["device"])
 
     val_epoch_loss = []
@@ -156,7 +157,7 @@ def run_model():
                 "state_dict": model.state_dict(),
                 "optimizer" : optimizer.state_dict()
             }
-            save_checkpoint(checkpoint)
+            save_checkpoint(epoch, checkpoint, config["save_folder"]+"checkpoint_1.pt")
 
         # check validation loss
         mean_val_loss = check_scores(val_loader, model, config["device"], criterion)
@@ -177,12 +178,13 @@ def run_model():
         #    val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/doubleunet/", device=config["device"]
         #)
     
-    loss_plot_name = "loss_doubleunet"
+    loss_plot_name = "loss_" + config["model_name"]
     plt.figure(figsize=(10, 7))
     plt.plot(train_epoch_loss, color="blue", label="train loss")
     plt.plot(val_epoch_loss, color="green", label="validataion loss")
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
+    plt.title(config["model_name"] + "")
     plt.legend()
     #plt.savefig(f"/home/feliciaj/PolypSegmentation/loss_plots/{loss_plot_name}.png")
         

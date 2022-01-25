@@ -63,7 +63,6 @@ def dice_coef(pred, target):
     return (2.0 * intersection + 1) / (union + 1)
 
 
-
 def iou_score(pred, target):
     """
     IoU (Intersect over Union) used as metric.

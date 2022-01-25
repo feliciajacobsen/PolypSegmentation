@@ -49,11 +49,11 @@ def data_loaders(batch_size, train_transforms, val_transforms, num_workers, pin_
 
     """
     train_img_dir = "/home/feliciaj/data/Kvasir-SEG/train/train_images"
-    train_mask_dir = "/home/feliciaj/data/Kvasir-SEG/train/train_images"
+    train_mask_dir = "/home/feliciaj/data/Kvasir-SEG/train/train_masks"
     val_img_dir = "/home/feliciaj/data/Kvasir-SEG/train/val_images"
-    val_mask_dir = "/home/feliciaj/data/Kvasir-SEG/train/val_images"
+    val_mask_dir = "/home/feliciaj/data/Kvasir-SEG/train/val_masks"
     test_img_dir = "/home/feliciaj/data/Kvasir-SEG/train/test_images"
-    test_mask_dir = "/home/feliciaj/data/Kvasir-SEG/train/test_images"
+    test_mask_dir = "/home/feliciaj/data/Kvasir-SEG/train/test_masks"
 
     train_ds = KvasirSEGDataset(
         image_dir = train_img_dir,

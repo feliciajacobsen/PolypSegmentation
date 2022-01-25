@@ -75,9 +75,9 @@ def check_scores(loader, model, device, criterion):
 
 
 
-def save_checkpoint(state, filename="my_checkpoint.pt"):
-    print("=> Saving checkpoint")
-    torch.save(state, filename)
+def save_checkpoint(epoch, state, folder):
+    print("Epoch %d => Saving checkpoint" % epoch)
+    torch.save(state, folder)
 
 
 def load_checkpoint(checkpoint, model):

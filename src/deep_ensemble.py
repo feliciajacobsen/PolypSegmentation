@@ -59,13 +59,8 @@ def validate_ensembles():
     Only supports for ensemble_size=5 and model="unet" for now.
 
     """
-    save_folder = "/home/feliciaj/PolypSegmentation/ensembles"
-
-    load_folder = "home/feliciaj/PolypSegmentation/saved_models/unet"
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
-    model = UNet(in_channels=3, out_channels=1)
-    ensemble_size = 3
+    save_folder = "/home/feliciaj/PolypSegmentation/ensembles/"
+    load_folder = "home/feliciaj/PolypSegmentation/saved_models/unet/"
 
     val_transforms = A.Compose(
         [   
@@ -86,7 +81,10 @@ def validate_ensembles():
         pin_memory=True
     )
 
-     
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    model = UNet(in_channels=3, out_channels=1)
+    ensemble_size = 3
+  
     model_list = []
     for i in range(ensemble_size):
         model_list.append(model)
@@ -108,10 +106,8 @@ def validate_ensembles():
 
     criterion = DiceLoss()
 
-    filenames = os.listdir(test_folder)
     with torch.no_grad():
         for idx, (x, y) in enumerate(test_loader):
-            filename = filename.split(".",1)[0] 
             mask = y.to(device=device).unsqueeze(1)
             x = x.to(device=device)
             prob, variance = model(x)
