@@ -63,9 +63,7 @@ def check_scores(loader, model, device, criterion):
             iou += iou_score(pred, y)
             loss.append(criterion(model(x), y).item())
     
-    print(
-        f"Got {num_correct}/{num_pixels} with acc {num_correct/num_pixels*100:.2f}"
-    )
+    print(f"Accuracy: {num_correct}/{num_pixels} or {num_correct/num_pixels*100:.2f} percent")
     print(f"IoU score: {iou/len(loader)}")
     print(f"Dice score: {dice/len(loader)}")
     
