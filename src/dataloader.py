@@ -42,50 +42,110 @@ class PolypDataset(Dataset):
         return image, mask
 
 
+def data_loaders(batch_size, train_transforms, val_transforms, num_workers, pin_memory):
+    """
+    Get dataloaders of train, validation and test dataset. 
+    Val transfomrs are also used on test data.
 
-def data_loader(batch_size, num_workers, pin_memory, transform):
-    data_set = PolypDataset("/home/feliciaj/data/Kvasir-SEG/images/", "/home/feliciaj/data/Kvasir-SEG/masks/", transform)
-    frac = 0.8
-    train_size = math.floor(len(data_set)*frac)
-    test_size = len(data_set) - train_size  
-    
-    train_set, test_set = random_split(data_set, [train_size, test_size], generator=torch.Generator().manual_seed(seed))
+    """
+    train_img_dir = "/home/feliciaj/data/Kvasir-SEG/train/train_images"
+    train_mask_dir = "/home/feliciaj/data/Kvasir-SEG/train/train_images"
+    val_img_dir = "/home/feliciaj/data/Kvasir-SEG/train/val_images"
+    val_mask_dir = "/home/feliciaj/data/Kvasir-SEG/train/val_images"
+    test_img_dir = "/home/feliciaj/data/Kvasir-SEG/train/test_images"
+    test_mask_dir = "/home/feliciaj/data/Kvasir-SEG/train/test_images"
+
+    train_ds = KvasirSEGDataset(
+        image_dir = train_img_dir,
+        mask_dir = train_mask_dir,
+        transform = train_transforms,
+    )
 
     train_loader = DataLoader(
-        train_set,
+        train_ds,
         batch_size = batch_size,
         num_workers = num_workers,
         pin_memory = pin_memory,
         shuffle = True,
     )
-    
+
+    val_ds = KvasirSEGDataset(
+        image_dir = val_img_dir,
+        mask_dir = val_mask_dir,
+        transform = val_transforms,
+    )
+
     val_loader = DataLoader(
-        test_set,
+        val_ds,
+        batch_size = batch_size,
+        num_workers = num_workers,
+        pin_memory = False,
+        shuffle = False,
+    )
+    
+    test_ds = KvasirSEGDataset(
+        image_dir = test_img_dir,
+        mask_dir = test_mask_dor,
+        transform = val_transforms
+    )
+
+    test_loader = DataLoader(
+        test_ds,
         batch_size = batch_size,
         num_workers = num_workers,
         pin_memory = pin_memory,
-        shuffle = True,
-    )
-    
-    return train_loader, val_loader
+        shuffle = False,
+    ) 
+
+    return train_loader, val_loader, test_loader
 
 
-def store_split_data(loader, folder):
-    """
-    Function saves the predicted masks an stores in separate folder.
-    """
-    """
-    path = os.path.join(folder, "val_images")
-    os.makedirs(path)
-    path = os.path.join(folder, "val_masks")
-    os.makedirs(path)
-    """
-    # must get filename in some way
 
-    for idx, (img, mask) in enumerate(loader):
-        torchvision.utils.save_image(img, f"{folder}/val_images/{filename}.png")
-        torchvision.utils.save_image(mask, f"{folder}/val_masks/{filename}.png")
+def move_images():
+    """
+    Function takes dataset containing image and corresponding mask, 
+    and splits into folders for train, val and test data.
 
+    Mask musth have equal filename as its corresponding image.
+    """
+    data_set = PolypDataset("/home/feliciaj/data/Kvasir-SEG/images/", "/home/feliciaj/data/Kvasir-SEG/masks/", transform=None)
+
+    base_path = "/home/feliciaj/data/Kvasir-SEG/"
+
+    dirs = [
+        base_path+"train/train_images/", 
+        base_path+"train/train_masks/", 
+        base_path+"val/val_images/", 
+        base_path+"val/val_masks/"
+    ]
+    for d in dirs:
+        if not os.path.exists(d):
+            os.makedirs(d)
+
+    train_frac = 0.8
+    val_frac = 0.2
+
+    N = len(data_set) # number of images
+    perm = np.random.permutation(N)
+    filenames = np.array(os.listdir(base_path + "images/"))[perm] # shuffle filenames for randomness
+
+    for i, f in enumerate(filenames):
+        if (i < train_frac * N):
+            middle_path = "train/train_"
+        else:
+            middle_path = "val/val_"
+
+        # copy images
+        shutil.copy(
+            base_path + "images/" + f, 
+            base_path + middle_path + "images/" + f
+        )
+
+        # copy masks
+        shutil.copy(
+            base_path + "masks/" + f, 
+            base_path + middle_path + "masks/" + f
+        )
 
 
 if __name__ == "__main__":

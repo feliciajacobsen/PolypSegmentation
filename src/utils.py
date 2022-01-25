@@ -4,7 +4,7 @@ import torchvision
 import os
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
-from dataloader import data_loader
+from dataloader import data_loaders
 
 from metrics import dice_coef, iou_score
 
@@ -42,7 +42,7 @@ def check_scores(loader, model, device, criterion):
         criterion (function): scoring function.
 
     Returns:
-        Mean loss over training data.
+        Mean loss, dice and iou over loader data.
     """
     num_correct = 0
     num_pixels = 0
@@ -71,7 +71,7 @@ def check_scores(loader, model, device, criterion):
     
     model.train()
 
-    return sum(loss)/len(loader)
+    return sum(loss)/len(loader), dice/len(loader), iou/len(loader)
 
 
 
@@ -138,6 +138,26 @@ class EarlyStopping():
                 self.early_stop = True
 
 
+def save_grid(ims, folder, rows=None, cols=None, showax=False):
+    if rows is None != cols is None:
+        raise ValueError("Set either both rows and cols or neither.")
+
+    if rows is None:
+        rows = len(ims)
+        cols = 1
+
+    gridspec_kw = {'wspace': 0, 'hspace': 0} 
+    if ims.size[0] < rows*cols:
+        fig,axarr = plt.subplots(ims.size[0]//rows, ims.size[2], gridspec_kw=gridspec_kw)
+    else:
+        fig,axarr = plt.subplots(rows, cols, gridspec_kw=gridspec_kw)
+
+    for ax,im in zip(axarr.ravel(), ims):
+        ax.imshow(im, cmap="jet")
+        ax.set_axis_off()
+
+    kwargs = {'pad_inches': .00} 
+    fig.savefig(folder, transparent=True, **kwargs)
 
 
 if __name__ == "__main__":

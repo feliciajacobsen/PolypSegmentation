@@ -7,11 +7,10 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 
 # Local imports
-from Unet import UNET
-from double_Unet import double_UNET
+from unet import UNet, UNet_dropout
 from resunetplusplus import Res_Unet_Plus_Plus
-from test import DoubleUNet
-from dataloader import data_loader
+from doubleunet import DoubleUNet
+from dataloader import data_loaders
 from utils import (
     check_scores, 
     load_checkpoint, 
@@ -26,7 +25,7 @@ from metrics import (
 )
 
 
-def train_model(loader, model, device, optimizer, criterion, scheduler):
+def train_model(loader, model, device, optimizer, criterion):
     """
     Function perform one epoch on entire dataset and prints loss for each batch.
 
@@ -65,7 +64,6 @@ def train_model(loader, model, device, optimizer, criterion, scheduler):
         scaler.step(optimizer) # update gradients
         scaler.update() # update scale factor
         
-        
         """
         if scheduler is not None:
             scheduler.step(mean_loss)
@@ -102,6 +100,7 @@ def run_model():
             ToTensorV2(),
         ],
     )
+
 
     val_transforms = A.Compose(
         [   
@@ -149,14 +148,15 @@ def run_model():
 
     for epoch in range(config["num_epochs"]):
         # train on training data, prints accuracy and dice score of training data
-        mean_train_loss = train_model(train_loader, model, config["device"], optimizer, criterion, scheduler)
+        mean_train_loss = train_model(train_loader, model, config["device"], optimizer, criterion)
 
         # save model
-        checkpoint = {
-            "state_dict": model.state_dict(),
-            "optimizer" : optimizer.state_dict()
-        }
-        save_checkpoint(checkpoint)
+        if epoch == config["num_epochs"]-1:
+            checkpoint = {
+                "state_dict": model.state_dict(),
+                "optimizer" : optimizer.state_dict()
+            }
+            save_checkpoint(checkpoint)
 
         # check validation loss
         mean_val_loss = check_scores(val_loader, model, config["device"], criterion)
@@ -184,7 +184,7 @@ def run_model():
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.legend()
-    #plt.savefig(f"/home/feliciaj/PolypSegmentation/src/{loss_plot_name}.png")
+    #plt.savefig(f"/home/feliciaj/PolypSegmentation/loss_plots/{loss_plot_name}.png")
         
 
 if __name__ == "__main__":
