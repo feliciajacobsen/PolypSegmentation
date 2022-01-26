@@ -5,6 +5,8 @@ import os
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from dataloader import data_loaders
+import matplotlib.pyplot as plt
+from matplotlib import gridspec
 
 from metrics import dice_coef, iou_score
 
@@ -136,7 +138,7 @@ class EarlyStopping():
                 self.early_stop = True
 
 
-def save_grid(ims, folder, rows=None, cols=None, showax=False):
+def save_grid(ims, folder, rows=None, cols=None):
     if rows is None != cols is None:
         raise ValueError("Set either both rows and cols or neither.")
 
@@ -144,9 +146,15 @@ def save_grid(ims, folder, rows=None, cols=None, showax=False):
         rows = len(ims)
         cols = 1
 
-    gridspec_kw = {'wspace': 0, 'hspace': 0} 
-    if ims.size[0] < rows*cols:
-        fig,axarr = plt.subplots(ims.size[0]//rows, ims.size[2], gridspec_kw=gridspec_kw)
+    #gridspec_kw = {'wspace': 0, 'hspace': 0} 
+    gs = gridspec.GridSpec(rows, cols,
+         wspace=0.0, hspace=0.0, 
+         top=1.-0.5/(rows+1), bottom=0.5/(rows+1), 
+         left=0.5/(cols+1), right=1-0.5/(cols+1)
+         ) 
+
+    if ims.shape[0] < rows*cols:
+        fig,axarr = plt.subplots(ims.shape[1]//rows, ims.shape[2])
     else:
         fig,axarr = plt.subplots(rows, cols, gridspec_kw=gridspec_kw)
 

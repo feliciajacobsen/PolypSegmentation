@@ -4,7 +4,6 @@ import torchvision
 import os
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
-from PIL import Image
 
 # local imports
 from unet import UNet
@@ -28,7 +27,7 @@ class MyEnsemble(nn.Module):
         mean_pred (tensor): mean predicted mask by ensemble models of size (B,C,H,W).
         variance (tensor): normalized variance tensor of predicted mask of size (B,C,H,W).
     """
-    def __init__(self, modelA, modelB, modelC, modelD, modelE, device):
+    def __init__(self, modelA, modelB, modelC, device):
         super(MyEnsemble, self).__init__()
 
         self.modelA = modelA.to(device)
@@ -64,6 +63,7 @@ def validate_ensembles():
 
     val_transforms = A.Compose(
         [   
+            A.Resize(height=256, width=256),
             A.Normalize(
                 mean=[0.5568, 0.3221, 0.2368],
                 std=[0.3191, 0.2220, 0.1878],
@@ -94,7 +94,7 @@ def validate_ensembles():
     
     # load models
     for model, path in zip(model_list, paths):
-        checkpoint = torch.load(path)
+        checkpoint = torch.load(load_folder + path)
         model.load_state_dict(checkpoint["state_dict"])
     
     model.eval()
@@ -116,7 +116,7 @@ def validate_ensembles():
 
             torchvision.utils.save_image(pred, f"{save_folder}/pred_{idx}.png")
             torchvision.utils.save_image(mask, f"{save_folder}/mask_{idx}.png")
-            save_grid(variance, f"{save_folder}/heatmap_{idx}.png", rows=4, cols=8)
+            save_grid(variance.permute(0,2,3,1), f"{save_folder}/heatmap_{idx}.png", rows=4, cols=8)
 
         loss, dice, iou = check_scores(test_loader, model, device, criterion)
     model.train()
