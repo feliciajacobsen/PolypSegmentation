@@ -8,7 +8,11 @@ from albumentations.pytorch import ToTensorV2
 # local imports
 from unet import UNet
 from dataloader import data_loaders
-from utils import save_grid, check_scores
+from utils import (
+    save_grid, 
+    check_scores, 
+    standard_transforms
+)
 
 from metrics import DiceLoss
 
@@ -61,22 +65,10 @@ def validate_ensembles():
     save_folder = "/home/feliciaj/PolypSegmentation/ensembles/"
     load_folder = "/home/feliciaj/PolypSegmentation/saved_models/unet/"
 
-    val_transforms = A.Compose(
-        [   
-            A.Resize(height=256, width=256),
-            A.Normalize(
-                mean=[0.5568, 0.3221, 0.2368],
-                std=[0.3191, 0.2220, 0.1878],
-                max_pixel_value=255.0,
-            ),
-            ToTensorV2(),
-        ],
-    )
-
     train_loader, val_loader, test_loader = data_loaders(
         batch_size=32, 
-        train_transforms=val_transforms, 
-        val_transforms=val_transforms, 
+        train_transforms=standard_transforms(256,256), 
+        val_transforms=standard_transforms(256,256), 
         num_workers=4, 
         pin_memory=True
     )

@@ -74,7 +74,6 @@ def check_scores(loader, model, device, criterion):
     return sum(loss)/len(loader), dice/len(loader), iou/len(loader)
 
 
-
 def save_checkpoint(epoch, state, folder):
     print("Epoch %d => Saving checkpoint" % epoch)
     torch.save(state, folder)
@@ -83,7 +82,6 @@ def save_checkpoint(epoch, state, folder):
 def load_checkpoint(checkpoint, model):
     print("=> Loading checkpoint")
     model.load_state_dict(checkpoint["state_dict"])    
-
 
 
 def save_preds_as_imgs(loader, model, folder, device="cpu"):
@@ -104,8 +102,6 @@ def save_preds_as_imgs(loader, model, folder, device="cpu"):
         torchvision.utils.save_image(y.unsqueeze(1), f"{folder}/mask_{idx}.png")
 
     model.train()
-
-
 
 
 class EarlyStopping():
@@ -164,6 +160,21 @@ def save_grid(ims, folder, rows=None, cols=None):
 
     kwargs = {'pad_inches': .00} 
     fig.savefig(folder, transparent=True, **kwargs)
+
+
+def standard_transforms(height, width):
+    transforms = A.Compose(
+        [   
+            A.Resize(height=height, width=width),
+            A.Normalize(
+                mean=[0.5568, 0.3221, 0.2368],
+                std=[0.3191, 0.2220, 0.1878],
+                max_pixel_value=255.0,
+            ),
+            ToTensorV2(),
+        ],
+    )
+    return transforms
 
 
 if __name__ == "__main__":
