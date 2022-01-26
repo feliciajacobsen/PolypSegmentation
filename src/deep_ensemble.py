@@ -9,12 +9,11 @@ from albumentations.pytorch import ToTensorV2
 from unet import UNet
 from dataloader import data_loaders
 from utils import (
-    save_grid, 
-    check_scores, 
+    save_grid,  
     standard_transforms
 )
 
-from metrics import DiceLoss
+from metrics import DiceLoss, dice_coef, iou_score
 
 #import matplotlib.pyplot as plt
 
@@ -98,19 +97,25 @@ def validate_ensembles():
     criterion = DiceLoss()
 
     with torch.no_grad():
-        for idx, (x, y) in enumerate(test_loader):
-            mask = y.to(device=device).unsqueeze(1)
+        dice = 0
+        iou = 0
+        for batch, (x, y) in enumerate(test_loader):
+            y = y.to(device=device).unsqueeze(1)
             x = x.to(device=device)
             prob, variance = model(x)
             pred = torch.sigmoid(prob)
             pred = (pred > 0.5).float() 
+            dice += dice_coef(pred, y)
+            iou += iou_score(pred, y)
             variance = variance.cpu().detach()
 
-            torchvision.utils.save_image(pred, f"{save_folder}/pred_{idx}.png")
-            torchvision.utils.save_image(mask, f"{save_folder}/mask_{idx}.png")
-            save_grid(variance.permute(0,2,3,1), f"{save_folder}/heatmap_{idx}.png", rows=4, cols=8)
+            torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png")
+            torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
+            save_grid(variance.permute(0,2,3,1), f"{save_folder}/heatmap_{batch}.png", rows=4, cols=8)
 
-        loss, dice, iou = check_scores(test_loader, model, device, criterion)
+        print(f"IoU score: {iou/len(test_loader)}")
+        print(f"Dice score: {dice/len(test_loader)}")
+
     model.train()
 
 

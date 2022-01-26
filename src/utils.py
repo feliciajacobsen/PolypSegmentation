@@ -92,15 +92,13 @@ def save_preds_as_imgs(loader, model, folder, device="cpu"):
         os.makedirs(folder)
 
     model.eval()
-
-    for idx, (x,y) in enumerate(loader):
+    for batch, (x,y) in enumerate(loader):
         x = x.to(device=device)
         with torch.no_grad():
             preds = torch.sigmoid(model(x)) 
             preds = (preds > 0.5).float() 
-        torchvision.utils.save_image(preds, f"{folder}/pred_{idx}.png")
-        torchvision.utils.save_image(y.unsqueeze(1), f"{folder}/mask_{idx}.png")
-
+        torchvision.utils.save_image(preds, f"{folder}/pred_{batch}.png")
+        torchvision.utils.save_image(y.unsqueeze(1), f"{folder}/mask_{batch}.png")
     model.train()
 
 
@@ -152,7 +150,7 @@ def save_grid(ims, folder, rows=None, cols=None):
     if ims.shape[0] < rows*cols:
         fig,axarr = plt.subplots(ims.shape[1]//rows, ims.shape[2])
     else:
-        fig,axarr = plt.subplots(rows, cols, gridspec_kw=gridspec_kw)
+        fig,axarr = plt.subplots(rows, cols)
 
     for ax,im in zip(axarr.ravel(), ims):
         ax.imshow(im, cmap="jet")

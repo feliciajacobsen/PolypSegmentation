@@ -16,7 +16,8 @@ from utils import (
     load_checkpoint, 
     save_checkpoint, 
     save_preds_as_imgs,  
-    EarlyStopping
+    EarlyStopping,
+    standard_transforms
 )
 
 from metrics import (
@@ -103,20 +104,9 @@ def run_model():
         ],
     )
 
-
-    val_transforms = A.Compose(
-        [   
-            A.Resize(height=config["image_height"], width=config["image_width"]),
-            A.Normalize(
-                mean=[0.5579, 0.3214, 0.2350],
-                std=[0.3185, 0.2218, 0.1875],
-                max_pixel_value=255.0,
-            ),
-            ToTensorV2(),
-        ],
-    )
+    val_transforms = standard_transforms(config["image_height"], config["image_width"])
     
-   
+    
     #model = UNET(in_channels=3, out_channels=config["numcl"]).to(config["device"])
     #model = Res_Unet_Plus_Plus(in_channels=3).to(config["device"])
     model = DoubleUNet().to(config["device"])
@@ -128,7 +118,7 @@ def run_model():
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
     #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=20, verbose=True) 
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=20) 
 
     early_stopping = None #EarlyStopping()
 
@@ -139,14 +129,8 @@ def run_model():
         transform=val_transforms
     )
 
-    
-    if config["load_model"]:
-        load_checkpoint(torch.load("./checkpoint_1.pt"), model)
-    #check_scores(val_loader, model, device=config["device"])
-
     val_epoch_loss = []
     train_epoch_loss = []
-
     for epoch in range(config["num_epochs"]):
         # train on training data, prints accuracy and dice score of training data
         mean_train_loss = train_model(train_loader, model, config["device"], optimizer, criterion)
@@ -182,11 +166,12 @@ def run_model():
         val_epoch_loss.append(mean_val_loss)
         train_epoch_loss.append(mean_train_loss)
 
-        # print examples to a folder
+        # save examples to a folder
         #save_preds_as_imgs(
         #    val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/doubleunet/", device=config["device"]
         #)
     
+    # save loss vs. epoch loss
     loss_plot_name = "loss_" + config["model_name"]
     plt.figure(figsize=(10, 7))
     plt.plot(train_epoch_loss, color="blue", label="train loss")
