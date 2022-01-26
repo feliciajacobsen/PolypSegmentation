@@ -89,13 +89,12 @@ def validate_ensembles():
     for i in range(ensemble_size):
         model_list.append(model)
     
-    paths = os.listdir(load_folder)[:ensemble_size] # list of elements in folder
-
+    paths = os.listdir(load_folder)[:ensemble_size] # list of saved models in folder
     assert len(paths) == ensemble_size, "No. of folder elements does not match ensemble size"
     
     # load models
     for model, path in zip(model_list, paths):
-        checkpoint = torch.load(main_path + path)
+        checkpoint = torch.load(path)
         model.load_state_dict(checkpoint["state_dict"])
     
     model.eval()

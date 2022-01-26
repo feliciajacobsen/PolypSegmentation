@@ -151,24 +151,33 @@ def run_model():
         # train on training data, prints accuracy and dice score of training data
         mean_train_loss = train_model(train_loader, model, config["device"], optimizer, criterion)
 
-        # save model
-        if epoch == config["num_epochs"]-1:
-            checkpoint = {
-                "state_dict": model.state_dict(),
-                "optimizer" : optimizer.state_dict()
-            }
-            save_checkpoint(epoch, checkpoint, config["save_folder"]+"checkpoint_1.pt")
-
         # check validation loss
+        print("------------")
+        print("At epoch %d :" % epoch)
         mean_val_loss = check_scores(val_loader, model, config["device"], criterion)
+
+        # save model after training
+        if epoch==config["num_epochs"]-1:
+            checkpoint = {
+                "epoch": epoch,
+                "state_dict": model.state_dict(),
+                "optimizer" : optimizer.state_dict(),
+                "criterion" : criterion.state_dict(),
+                "loss": mean_val_loss
+            }
+            # change name of file and run in order to save more models
+            save_checkpoint(epoch, checkpoint, config["save_folder"]+config["model_name"]+"_checkpoint_1.pt")
+
+         # check validation loss
+        mean_val_loss = check_scores(val_loader, model, config["device"], criterion)
+
+        if scheduler is not None:
+            scheduler.step(mean_val_loss)
 
         if early_stopping is not None:
             early_stopping(mean_val_loss)
             if early_stopping.early_stop:
                 break
-
-        if scheduler is not None:
-            scheduler.step(mean_val_loss)
 
         val_epoch_loss.append(mean_val_loss)
         train_epoch_loss.append(mean_train_loss)
