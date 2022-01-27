@@ -4,6 +4,7 @@ import torchvision
 import os
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
+from tqdm import tqdm
 
 # local imports
 from unet import UNet
@@ -14,8 +15,6 @@ from utils import (
 )
 
 from metrics import DiceLoss, dice_coef, iou_score
-
-#import matplotlib.pyplot as plt
 
 
 class MyEnsemble(nn.Module):
@@ -38,24 +37,23 @@ class MyEnsemble(nn.Module):
         self.modelC = modelC.to(device)
     
     def forward(self, x):
-        shape = x.shape
+        print("predict with model A")
         x1 = self.modelA(x.clone()) # pred from model A
+        print("predict with model B")
         x2 = self.modelB(x.clone()) # pred from model B
+        print("predict with model C")
         x3 = self.modelC(x.clone()) # pred from model C
         
         outputs = torch.stack([x1, x2, x3])
-        
         mean = torch.mean(outputs, dim=0).double() # element wise mean from outout of ensemble models
-
         pred = torch.sigmoid(outputs)
         mean_pred = torch.sigmoid(mean).float() # only extract class prob
-
         variance = torch.mean((pred**2 - mean_pred), dim=0).double()
 
         return mean, variance 
 
 
-def validate_ensembles():
+def test_ensembles():
     """
     Function loads trained models and make prediction on data from loader.
     Only supports for ensemble_size=5 and model="unet" for now.
@@ -72,7 +70,8 @@ def validate_ensembles():
         pin_memory=True
     )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    criterion = DiceLoss() 
     model = UNet(in_channels=3, out_channels=1)
     ensemble_size = 3
   
@@ -83,6 +82,7 @@ def validate_ensembles():
     paths = os.listdir(load_folder)[:ensemble_size] # list of saved models in folder
     assert len(paths) == ensemble_size, "No. of folder elements does not match ensemble size"
     
+    print("load models")
     # load models
     for model, path in zip(model_list, paths):
         checkpoint = torch.load(load_folder + path)
@@ -93,16 +93,18 @@ def validate_ensembles():
     model = MyEnsemble(
         model_list[0], model_list[1], model_list[2], device=device
     )
-
-    criterion = DiceLoss()
-
+    tqdm_loader = tqdm(test_loader)
+    dice = 0
+    iou = 0
+    print("test models")
     with torch.no_grad():
-        dice = 0
-        iou = 0
-        for batch, (x, y) in enumerate(test_loader):
+        for batch, (x, y) in enumerate(tqdm_loader):
             y = y.to(device=device).unsqueeze(1)
             x = x.to(device=device)
+            print(x.shape)
+            print(y.shape)
             prob, variance = model(x)
+            print(variance.shape)
             pred = torch.sigmoid(prob)
             pred = (pred > 0.5).float() 
             dice += dice_coef(pred, y)
@@ -113,11 +115,11 @@ def validate_ensembles():
             torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
             save_grid(variance.permute(0,2,3,1), f"{save_folder}/heatmap_{batch}.png", rows=4, cols=8)
 
-        print(f"IoU score: {iou/len(test_loader)}")
-        print(f"Dice score: {dice/len(test_loader)}")
+    print(f"IoU score: {iou/len(test_loader)}")
+    print(f"Dice score: {dice/len(test_loader)}")
 
     model.train()
 
 
 if __name__ == "__main__":
-    validate_ensembles()
+    test_ensembles()

@@ -79,7 +79,7 @@ def data_loaders(batch_size, train_transforms, val_transforms, num_workers, pin_
         val_ds,
         batch_size = batch_size,
         num_workers = num_workers,
-        pin_memory = False,
+        pin_memory = pin_memory,
         shuffle = False,
     )
     
@@ -106,7 +106,7 @@ def move_images():
     Function takes dataset containing image and corresponding mask, 
     and splits into folders for train, val and test data.
 
-    Mask musth have equal filename as its corresponding image.
+    Mask must have equal filename as its corresponding image.
     """
     data_set = PolypDataset("/home/feliciaj/data/Kvasir-SEG/images/", "/home/feliciaj/data/Kvasir-SEG/masks/", transform=None)
 
