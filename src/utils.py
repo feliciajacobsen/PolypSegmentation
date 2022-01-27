@@ -54,7 +54,7 @@ def check_scores(loader, model, device, criterion):
 
     model.eval()
     with torch.no_grad():
-        for batch, (x, y) in enumerate(loader):
+        for x, y in loader:
             x = x.to(device)
             y = y.to(device).unsqueeze(1)
             pred = torch.sigmoid(model(x))

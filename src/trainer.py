@@ -65,10 +65,6 @@ def train_model(loader, model, device, optimizer, criterion):
         scaler.step(optimizer) # update gradients
         scaler.update() # update scale factor
         
-        """
-        if scheduler is not None:
-            scheduler.step(mean_loss)
-        """
         # update tqdm loop
         tqdm_loader.set_postfix(loss=loss.item())
 
@@ -80,9 +76,9 @@ def run_model():
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     config["load_model"] = False
-    config["num_epochs"] = 3
+    config["num_epochs"] = 150
     config["numcl"] = 1
-    config["batch_size"] = 64
+    config["batch_size"] = 32
     config["pin_memory"] = True
     config["num_workers"] = 4
     config["image_height"] = 256
@@ -124,9 +120,10 @@ def run_model():
 
     train_loader, val_loader, test_loader = data_loaders(
         batch_size=config["batch_size"], 
+        train_transforms=train_transforms,
+        val_transforms=val_transforms,
         num_workers=config["num_workers"], 
-        pin_memory=config["pin_memory"], 
-        transform=val_transforms
+        pin_memory=config["pin_memory"]
     )
 
     val_epoch_loss = []
@@ -138,7 +135,7 @@ def run_model():
         # check validation loss
         print("------------")
         print("At epoch %d :" % epoch)
-        mean_val_loss = check_scores(val_loader, model, config["device"], criterion)
+        mean_val_loss, dice, iou = check_scores(val_loader, model, config["device"], criterion)
 
         # save model after training
         if epoch==config["num_epochs"]-1:
@@ -152,9 +149,6 @@ def run_model():
             # change name of file and run in order to save more models
             save_checkpoint(epoch, checkpoint, config["save_folder"]+config["model_name"]+"_checkpoint_1.pt")
 
-         # check validation loss
-        mean_val_loss = check_scores(val_loader, model, config["device"], criterion)
-
         if scheduler is not None:
             scheduler.step(mean_val_loss)
 
@@ -167,9 +161,9 @@ def run_model():
         train_epoch_loss.append(mean_train_loss)
 
         # save examples to a folder
-        #save_preds_as_imgs(
-        #    val_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/doubleunet/", device=config["device"]
-        #)
+        save_preds_as_imgs(
+            test_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/"+"/"+config["model_name"], device=config["device"]
+        )
     
     # save loss vs. epoch loss
     loss_plot_name = "loss_" + config["model_name"]

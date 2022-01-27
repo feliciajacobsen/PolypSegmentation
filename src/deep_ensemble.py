@@ -73,7 +73,7 @@ def test_ensembles():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     criterion = DiceLoss() 
     model = UNet(in_channels=3, out_channels=1)
-    ensemble_size = 3
+    ensemble_size = 2
   
     model_list = []
     for i in range(ensemble_size):
