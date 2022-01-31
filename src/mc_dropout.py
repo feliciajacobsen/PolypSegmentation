@@ -17,7 +17,7 @@ from unet import UNet_dropout, UNet
 
 from dataloader import data_loaders
 
-from utils import check_scores, save_grid
+from utils import check_scores, save_grid, standard_transforms
 from metrics import dice_coef, iou_score, DiceLoss
 
 
@@ -32,10 +32,10 @@ class UNetClassifier():
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, factor=0.1, patience=20, min_lr=1e-6) 
         self.loss_ = []
-        self.test_dice = []
-        self.test_iou = []
+        self.val_dice = []
+        self.val_iou = []
         
-    def fit(self, trainloader, valloader, verbose=True):
+    def train_model(self, trainloader, valloader, verbose=True):
         device = self.device
 
         X_test, y_test = iter(valloader).next()
@@ -45,8 +45,6 @@ class UNetClassifier():
         scaler = torch.cuda.amp.GradScaler()
 
         for epoch in range(self.max_epoch):
-            if self.scheduler is not None:
-                self.scheduler.step(mean_val_loss)
             for i, data in enumerate(tqdm_loader):
                 targets, labels = data
                 targets, labels = Variable(targets).cuda(), Variable(labels).cuda()
@@ -62,17 +60,21 @@ class UNetClassifier():
                 tqdm_loader.set_postfix(loss=loss.item())
 
             mean_val_loss, mean_val_dice, mean_val_iou = check_scores(valloader, self.model, self.device, self.criterion)
-            self.test_dice.append(mean_val_dice)
-            self.test_iou.append(mean_val_iou)
+            self.val_dice.append(mean_val_dice)
+            self.val_iou.append(mean_val_iou)
             self.loss_.append(mean_val_loss)
+
+            if self.scheduler is not None:
+                    self.scheduler.step(mean_val_loss)
+            
             
             if verbose:
-                print("---------")
                 print("Epoch {} ==> loss: {}".format(epoch+1, self.loss_[-1]))
+                print("---------")
 
-        return self.test_dice
+        return self.val_dice
     
-    def predict(self, x): 
+    def test_model(self, x): 
         model = self.model.eval()
         with torch.no_grad():
             prob = torch.sigmoid(model(x))
@@ -138,7 +140,9 @@ def get_monte_carlo_predictions(loader,forward_passes,model,n_classes,n_samples,
 
 
 
-def run_model():
+def run_model(train=True):
+    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
+
     train_transforms = A.Compose([
         A.Resize(height=256, width=256),
         A.RGBShift(r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=0.9),
@@ -159,22 +163,10 @@ def run_model():
         ToTensorV2(),
     ])
 
-    val_transforms = A.Compose(
-        [   
-            A.Resize(height=256, width=256),
-            A.Normalize(
-                mean=[0.5579, 0.3214, 0.2350],
-                std=[0.3185, 0.2218, 0.1875],
-                max_pixel_value=255.0,
-            ),
-            ToTensorV2(),
-        ],
-    )
-
     train_loader, val_loader, test_loader = data_loaders(
         batch_size=32, 
-        train_transforms=val_transforms, 
-        val_transforms=val_transforms, 
+        train_transforms=train_transforms, 
+        val_transforms=standard_transforms(256,256), 
         num_workers=4, 
         pin_memory=True
     )
@@ -182,31 +174,32 @@ def run_model():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 
     # Define networks
-    unets = [UNetClassifier(device=device, droprate=0, max_epoch=150),
-            UNetClassifier(device=device, droprate=0.3, max_epoch=150),
-            UNetClassifier(device=device, droprate=0.5, max_epoch=150),
+    unets = [UNetClassifier(device=device, droprate=0, max_epoch=10),
+            UNetClassifier(device=device, droprate=0.3, max_epoch=10),
+            UNetClassifier(device=device, droprate=0.5, max_epoch=10),
             ]
-            
-    # Training, set verbose=True to see loss after each epoch.
-    [unet.fit(train_loader, val_loader, verbose=True) for unet in unets]
 
-    # Save trained models
-    for idx, unet in enumerate(unets):
-        torch.save(unet.model, "unet_"+str(idx)+".pt")
-        # Prepare to save dice
-        unet.test_dice = list(map(str, unet.test_dice))
 
-    # Save test errors to plot figures
-    open("unet_test_dices.txt","w").write("\n".join([",".join(unet.test_dice) for unet in unets])) 
+    if train:        
+        # Training, set verbose=True to see loss after each epoch.
+        [unet.train_model(train_loader, val_loader, verbose=True) for unet in unets]
 
-    save_model_path = "/home/PolypSegmentation/saved_models/unet_dropout/"
+        # Save trained models
+        for idx, unet in enumerate(unets):
+            torch.save(unet.model, save_path+"unet_"+str(idx)+".pt")
+            # Prepare to save dice
+            torch.save(unet.val_dice, "unet_val_dices.txt")
+            #unet.val_dice = list(map(str, unet.val_dice.numpy()))
+
+        # Save test errors to plot figures 
+        open("unet_val_dices.txt","w").write("\n".join([",".join(unet.val_dice) for unet in unets])) 
 
     # Load saved models to CPU
-    unet_models = [torch.load(save_model_path+"unet_"+str(idx)+".pt", map_location={'cuda:0': 'cpu'}) for idx in [0,1]]
+    unet_models = [torch.load(save_path+"unet_"+str(idx)+".pt", map_location={'cuda:0': 'cpu'}) for idx in [0,1]]
 
     # Load saved test errors to plot figures.
-    unet_test_dices = [array.split(",") for array in open("unet_test_dices.txt","r").read().split("\n")]
-    unet_test_dices = np.array(unet_test_dices,dtype="f")
+    unet_val_dices = [array.split(",") for array in open("unet_val_dices.txt","r").read().split("\n")]
+    unet_val_dices = np.array(unet_val_dices, dtype="f")
 
     labels = ["UNet no dropout","UNet with 30%% dropout","UNet with 50%% dropout"]
 
