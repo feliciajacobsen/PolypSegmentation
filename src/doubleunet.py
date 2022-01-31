@@ -96,10 +96,10 @@ class DoubleUNet(nn.Module):
     Credit: https://github.com/HotVar/Image-segmentation-DoubleUNet/blob/main/model.py
     """
     def __init__(self):
-        super().__init__()
+        super().__init__(in_channels, out_channels)
 
         self.VGG = nn.Sequential(
-            VGGBlock(3, 64, True),
+            VGGBlock(in_channels, 64, True),
             VGGBlock(64, 128, True),
             VGGBlock(128, 256, True),
             VGGBlock(256, 512, True),
@@ -152,7 +152,7 @@ class DoubleUNet(nn.Module):
 
         self.output2 = output_block()
 
-        self.output = nn.Conv2d(in_channels=2, out_channels=1, kernel_size=(1, 1))
+        self.output = nn.Conv2d(in_channels=2, out_channels=out_channels, kernel_size=(1, 1))
 
     def forward(self, _input):
         # encoder of 1st unet
@@ -209,6 +209,16 @@ class DoubleUNet(nn.Module):
         outputs = torch.cat([output1,output2], dim=1)
 
         return self.output(outputs)
+
+
+def test():
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    x = torch.randn((3, 1, 160, 160)).to(device)
+    model = UNet(in_channels=1, out_channels=1).to(device)
+    preds = model(x)
+    print(preds.shape)
+    print(x.shape)
+    assert preds.shape == x.shape
 
 if __name__ == "__main__":
     x = torch.randn((2, 3, 256, 256)) 

@@ -149,11 +149,12 @@ def save_grid(ims, folder, rows=None, cols=None):
          ) 
     """
     if ims.shape[0] < rows*cols:
-        fig,axarr = plt.subplots(ims.shape[1]//rows, ims.shape[2])
+        fig,axarr = plt.subplots(1, rows)
     else:
         fig,axarr = plt.subplots(rows, cols)
 
     plt.subplots_adjust(wspace=0, hspace=0)
+    fig.tight_layout(pad=0.0)
 
     for ax,im in zip(axarr.ravel(), ims):
         ax.imshow(im, cmap="jet")

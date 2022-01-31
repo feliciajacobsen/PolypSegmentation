@@ -61,8 +61,8 @@ def test_ensembles():
 
     train_loader, val_loader, test_loader = data_loaders(
         batch_size=32, 
-        train_transforms=standard_transforms(56,56), 
-        val_transforms=standard_transforms(56,56), 
+        train_transforms=standard_transforms(256,256), 
+        val_transforms=standard_transforms(256,256), 
         num_workers=4, 
         pin_memory=True
     )
@@ -71,20 +71,10 @@ def test_ensembles():
     criterion = DiceLoss() 
     model = UNet(in_channels=3, out_channels=1)
     ensemble_size = 3
-    """
-    model_list = []
-    for i in range(ensemble_size):
-        model_list.append(model)
-    """
+
     paths = os.listdir(load_folder)[:ensemble_size] # list of saved models in folder
     assert len(paths) == ensemble_size, "No. of folder elements does not match ensemble size"
-    print("load models")
-    """
-    # load models
-    for model, path in zip(model_list, paths):
-        checkpoint = torch.load(load_folder + path)
-        model.load_state_dict(checkpoint["state_dict"], strict=False)
-    """
+
     # load models
     for path in paths:
         checkpoint = torch.load(load_folder + path)
@@ -97,15 +87,11 @@ def test_ensembles():
     )
     dice = 0
     iou = 0
-    print("test models")
     with torch.no_grad():
         for batch, (x, y) in enumerate(test_loader):
-            print(x.shape)
-            print(y.shape)
             y = y.to(device=device).unsqueeze(1)
             x = x.to(device=device)
             prob, variance = model(x)
-            print(variance.shape)
             pred = torch.sigmoid(prob)
             pred = (pred > 0.5).float() 
             dice += dice_coef(pred, y)
@@ -114,7 +100,6 @@ def test_ensembles():
 
             torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png")
             torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
-            torchvision.utils.save_image(x, f"{save_folder}/input_{batch}.png")
             save_grid(variance.permute(0,2,3,1), f"{save_folder}/heatmap_{batch}.png", rows=4, cols=8)
 
     print(f"IoU score: {iou/len(test_loader)}")

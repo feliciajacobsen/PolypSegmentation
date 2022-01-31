@@ -78,7 +78,8 @@ def run_model():
     config["load_model"] = False
     config["plot_loss"] = False
     config["num_epochs"] = 150
-    config["numcl"] = 1
+    config["in_channels"] = 3
+    config["numcl"] = 1 # no of classes/output channels
     config["batch_size"] = 32
     config["pin_memory"] = True
     config["num_workers"] = 4
@@ -89,11 +90,11 @@ def run_model():
     config["save_folder"] = "/home/feliciaj/PolypSegmentation/saved_models/" + config["model_name"] + "/"
 
     if config["model_name"]=="unet":
-        model = UNet(in_channels=3, out_channels=config["numcl"]).to(config["device"])
+        model = UNet(config["in_channels"], config["numcl"]).to(config["device"])
     elif config["model_name"]=="doubleunet":
-        model = DoubleUNet().to(config["device"])
+        model = DoubleUNet(config["in_channels"], config["numcl"]).to(config["device"])
     elif config["model_name"]=="resunet++":
-        model = ResUnetPlusPlus(in_channels=3, out_channels=config["numcl"]).to(config["device"])
+        model = ResUnetPlusPlus(config["in_channels"], config["numcl"]).to(config["device"])
     else:
         print("ERROR: Model not found!")
     
