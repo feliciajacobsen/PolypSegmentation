@@ -4,22 +4,9 @@ import torchvision.models as models
 import torch.nn.functional as F
 import torchvision.transforms.functional as TF
 
+import numpy as np
+
 from modules import SE_Block, ASPP, Res_Shortcut
-
-
-class Residual_Shortcut(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super().__init__()
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-
-        self.conv = nn.Conv2d(self.in_channels, self.out_channels, kernel_size=(1, 1))
-        self.bn = nn.BatchNorm2d(self.out_channels)
-
-    def forward(self, x):
-        y = self.conv(x)
-        y = self.bn(y)
-        return y
 
 
 
@@ -63,12 +50,17 @@ class ASPP(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.bn = nn.BatchNorm2d(out_channels)
 
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
+        self.conv_block = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=1),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(out_channels),
+        )
+        
 
         self.aspp_blocks = nn.ModuleList()
         for rate in [6, 12, 18]:
             self.aspp_blocks.append(nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, 3, stride=1, padding=rate, dilation=rate),
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=rate, dilation=rate),
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(out_channels),
         ))
@@ -80,31 +72,17 @@ class ASPP(nn.Module):
         w = x.size()[3]
 
         y_pool0 = nn.AdaptiveAvgPool2d(output_size=1)(x)
-        y_conv0 = self.conv(y_pool0)
-        y_conv0 = self.bn(y_conv0)
-        y_conv0 = self.relu(y_conv0)
+        y_conv0 = self.conv_block(y_pool0)
         y_conv0 = nn.Upsample(size=(h, w), mode='bilinear')(y_conv0)
-
-        y_conv1 = self.conv(x)
-        y_conv1 = self.bn(y_conv1)
-        y_conv1 = self.relu(y_conv1)
-
+        y_conv1 = self.conv_block(x)
         y_conv2 = self.aspp_blocks[0](x)
-        y_conv2 = self.bn(y_conv2)
-        y_conv2 = self.relu(y_conv2)
-
         y_conv3 = self.aspp_blocks[1](x)
-        y_conv3 = self.bn(y_conv3)
-        y_conv3 = self.relu(y_conv3)
-
         y_conv4 = self.aspp_blocks[2](x)
-        y_conv4 = self.bn(y_conv4)
-        y_conv4 = self.relu(y_conv4)
 
         y = torch.cat([y_conv0, y_conv1, y_conv2, y_conv3, y_conv4], 1)
         y = self.output(y)
-        y = self.bn(y)
         y = self.relu(y)
+        y = self.bn(y)
 
         return y
 
@@ -114,6 +92,9 @@ def output_block():
 
 
 class DoubleUNet(nn.Module):
+    """
+    Credit: https://github.com/HotVar/Image-segmentation-DoubleUNet/blob/main/model.py
+    """
     def __init__(self):
         super().__init__()
 
@@ -128,39 +109,15 @@ class DoubleUNet(nn.Module):
         # apply pretrained vgg19 weights on 1st unet
         vgg19 = models.vgg19_bn()
         #vgg19.load_state_dict(torch.load(PATH_VGG19))
-        """
-        layer_list = [0,1,3,4]
-        feature_list = [[0,1,3,4],[7,8,10,11],[14,15,17,18],[27,28,30,31],[33,34,36,37]]
-        for net in enumrate(self.VGG):
-            for layer in layer_list:
-                for idx, feature in enumerate(feature_list):
-                    net.block[layer].weights = vgg19.features[feature[idx]].weight
-        """
 
-        self.VGG[0].conv[0].weights = vgg19.features[0].weight
-        self.VGG[0].conv[1].weights = vgg19.features[1].weight
-        self.VGG[0].conv[3].weights = vgg19.features[3].weight
-        self.VGG[0].conv[4].weights = vgg19.features[4].weight
+        x = np.array([0,1,3,4])
+        for i, j in zip(range(5), np.array([7,7,13,6])):
+            self.VGG[i].conv[0].weights = vgg19.features[x[0]].weight
+            self.VGG[i].conv[1].weights = vgg19.features[x[1]].weight
+            self.VGG[i].conv[3].weights = vgg19.features[x[2]].weight
+            self.VGG[i].conv[4].weights = vgg19.features[x[3]].weight
+            x += j
 
-        self.VGG[1].conv[0].weights = vgg19.features[7].weight
-        self.VGG[1].conv[1].weights = vgg19.features[8].weight
-        self.VGG[1].conv[2].weights = vgg19.features[10].weight
-        self.VGG[1].conv[4].weights = vgg19.features[11].weight
-
-        self.VGG[2].conv[0].weights = vgg19.features[14].weight
-        self.VGG[2].conv[1].weights = vgg19.features[15].weight
-        self.VGG[2].conv[2].weights = vgg19.features[17].weight
-        self.VGG[2].conv[4].weights = vgg19.features[18].weight
-
-        self.VGG[3].conv[0].weights = vgg19.features[27].weight
-        self.VGG[3].conv[1].weights = vgg19.features[28].weight
-        self.VGG[3].conv[2].weights = vgg19.features[30].weight
-        self.VGG[3].conv[4].weights = vgg19.features[31].weight
-
-        self.VGG[4].conv[0].weights = vgg19.features[33].weight
-        self.VGG[4].conv[1].weights = vgg19.features[34].weight
-        self.VGG[4].conv[2].weights = vgg19.features[36].weight
-        self.VGG[4].conv[4].weights = vgg19.features[37].weight
         del vgg19
 
         self.aspp1 = ASPP(512, 512)
@@ -192,7 +149,6 @@ class DoubleUNet(nn.Module):
             VGGBlock(384, 64, False, True),
             VGGBlock(192, 32, False, True)
         )
-
 
         self.output2 = output_block()
 

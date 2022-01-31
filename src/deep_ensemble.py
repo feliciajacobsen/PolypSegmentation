@@ -4,7 +4,6 @@ import torchvision
 import os
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
-from tqdm import tqdm
 
 # local imports
 from unet import UNet
@@ -38,11 +37,8 @@ class MyEnsemble(nn.Module):
         self.modelC = modelC.to(device)
     
     def forward(self, x):
-        print("predict with model A")
         x1 = self.modelA(x.clone()) # pred from model A
-        print("predict with model B")
         x2 = self.modelB(x.clone()) # pred from model B
-        print("predict with model C")
         x3 = self.modelC(x.clone()) # pred from model C
         
         outputs = torch.stack([x1, x2, x3])
@@ -61,28 +57,27 @@ def test_ensembles():
 
     """
     save_folder = "/home/feliciaj/PolypSegmentation/ensembles/"
-    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/doubleunet/"
+    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/unet/"
 
     train_loader, val_loader, test_loader = data_loaders(
         batch_size=32, 
-        train_transforms=None, 
-        val_transforms=standard_transforms(256,256), 
-        num_workers=2, 
+        train_transforms=standard_transforms(56,56), 
+        val_transforms=standard_transforms(56,56), 
+        num_workers=4, 
         pin_memory=True
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     criterion = DiceLoss() 
-    model = DoubleUNet() #UNet(in_channels=3, out_channels=1)
+    model = UNet(in_channels=3, out_channels=1)
     ensemble_size = 3
-  
+    """
     model_list = []
     for i in range(ensemble_size):
         model_list.append(model)
-    
+    """
     paths = os.listdir(load_folder)[:ensemble_size] # list of saved models in folder
     assert len(paths) == ensemble_size, "No. of folder elements does not match ensemble size"
-    print(paths)
     print("load models")
     """
     # load models
@@ -98,14 +93,13 @@ def test_ensembles():
     model.eval()
 
     model = MyEnsemble(
-        model_list[0], model_list[1], model_list[2], device=device
+        model, model, model, device=device
     )
-    tqdm_loader = tqdm(test_loader)
     dice = 0
     iou = 0
     print("test models")
     with torch.no_grad():
-        for batch, (x, y) in enumerate(tqdm_loader):
+        for batch, (x, y) in enumerate(test_loader):
             print(x.shape)
             print(y.shape)
             y = y.to(device=device).unsqueeze(1)
