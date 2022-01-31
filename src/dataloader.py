@@ -80,7 +80,7 @@ def data_loaders(batch_size, train_transforms, val_transforms, num_workers, pin_
         batch_size = batch_size,
         num_workers = num_workers,
         pin_memory = pin_memory,
-        shuffle = False,
+        shuffle = True,
     )
     
     test_ds = KvasirSEGDataset(

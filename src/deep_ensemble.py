@@ -64,16 +64,16 @@ def test_ensembles():
 
     train_loader, val_loader, test_loader = data_loaders(
         batch_size=32, 
-        train_transforms=standard_transforms(256,256), 
+        train_transforms=None, 
         val_transforms=standard_transforms(256,256), 
-        num_workers=4, 
+        num_workers=2, 
         pin_memory=True
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     criterion = DiceLoss() 
     model = UNet(in_channels=3, out_channels=1)
-    ensemble_size = 2
+    ensemble_size = 3
   
     model_list = []
     for i in range(ensemble_size):
@@ -81,12 +81,18 @@ def test_ensembles():
     
     paths = os.listdir(load_folder)[:ensemble_size] # list of saved models in folder
     assert len(paths) == ensemble_size, "No. of folder elements does not match ensemble size"
-    
+    print(paths)
     print("load models")
+    """
     # load models
     for model, path in zip(model_list, paths):
         checkpoint = torch.load(load_folder + path)
-        model.load_state_dict(checkpoint["state_dict"])
+        model.load_state_dict(checkpoint["state_dict"], strict=False)
+    """
+    # load models
+    for path in paths:
+        checkpoint = torch.load(load_folder + path)
+        model.load_state_dict(checkpoint["state_dict"], strict=False)
     
     model.eval()
 
@@ -99,10 +105,10 @@ def test_ensembles():
     print("test models")
     with torch.no_grad():
         for batch, (x, y) in enumerate(tqdm_loader):
-            y = y.to(device=device).unsqueeze(1)
-            x = x.to(device=device)
             print(x.shape)
             print(y.shape)
+            y = y.to(device=device).unsqueeze(1)
+            x = x.to(device=device)
             prob, variance = model(x)
             print(variance.shape)
             pred = torch.sigmoid(prob)
