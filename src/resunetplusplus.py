@@ -3,8 +3,8 @@ import torch.nn as nn
 from modules import ASPP, SE_Block, Res_Conv, Attention_Block
 
 
-class Res_Unet_Plus_Plus(nn.Module):
-    def __init__(self, in_channels, filters=[32, 64, 128, 256, 512]):
+class ResUnetPlusPlus(nn.Module):
+    def __init__(self, in_channels, out_channels, filters=[32, 64, 128, 256, 512]):
         super(Res_Unet_Plus_Plus, self).__init__()
 
         self.input_layer = nn.Sequential(
@@ -45,7 +45,7 @@ class Res_Unet_Plus_Plus(nn.Module):
 
         self.aspp_out = ASPP(filters[1], filters[0])
 
-        self.output_layer = nn.Conv2d(filters[0], 1, 1)
+        self.output_layer = nn.Conv2d(filters[0], out_channels, 1)
 
 
     def forward(self, x):
@@ -86,7 +86,7 @@ class Res_Unet_Plus_Plus(nn.Module):
 
 if __name__ == "__main__":
     x = torch.randn((2, 3, 256, 256)) 
-    model = Res_Unet_Plus_Plus(in_channels=3)
+    model = ResUnetPlusPlus(in_channels=3, out_channels=1)
     preds = model(x)
     print(preds.shape)
     print(x.shape)

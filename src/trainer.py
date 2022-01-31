@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 # Local imports
 from unet import UNet, UNet_dropout
-from resunetplusplus import Res_Unet_Plus_Plus
+from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
 from dataloader import data_loaders
 from utils import (
@@ -76,6 +76,7 @@ def run_model():
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     config["load_model"] = False
+    config["plot_loss"] = False
     config["num_epochs"] = 150
     config["numcl"] = 1
     config["batch_size"] = 32
@@ -83,8 +84,19 @@ def run_model():
     config["num_workers"] = 4
     config["image_height"] = 256
     config["image_width"] = 256
+    config["num_models"] = 3 # no. of models to train at once
     config["model_name"] = "unet"
     config["save_folder"] = "/home/feliciaj/PolypSegmentation/saved_models/" + config["model_name"] + "/"
+
+    if config["model_name"]=="unet":
+        model = UNet(in_channels=3, out_channels=config["numcl"]).to(config["device"])
+    elif config["model_name"]=="doubleunet":
+        model = DoubleUNet().to(config["device"])
+    elif config["model_name"]=="resunet++":
+        model = ResUnetPlusPlus(in_channels=3, out_channels=config["numcl"]).to(config["device"])
+    else:
+        print("ERROR: Model not found!")
+    
    
     train_transforms = A.Compose(
         [   A.Resize(height=config["image_height"], width=config["image_width"]),
@@ -101,11 +113,6 @@ def run_model():
     )
 
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
-    
-    
-    #model = UNET(in_channels=3, out_channels=config["numcl"]).to(config["device"])
-    #model = Res_Unet_Plus_Plus(in_channels=3).to(config["device"])
-    model = DoubleUNet().to(config["device"])
 
     #criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
     #criterion = BCEDiceLoss() # Sigmoid layer and Dice loss
@@ -128,53 +135,56 @@ def run_model():
 
     val_epoch_loss = []
     train_epoch_loss = []
-    for epoch in range(config["num_epochs"]):
-        # train on training data, prints accuracy and dice score of training data
-        mean_train_loss = train_model(train_loader, model, config["device"], optimizer, criterion)
 
-        # check validation loss
-        print("------------")
-        print("At epoch %d :" % epoch)
-        mean_val_loss, dice, iou = check_scores(val_loader, model, config["device"], criterion)
+    for model_idx in range(config["num_models"]):
+        for epoch in range(config["num_epochs"]):
 
-        # save model after training
-        if epoch==config["num_epochs"]-1:
-            checkpoint = {
-                "epoch": epoch,
-                "state_dict": model.state_dict(),
-                "optimizer" : optimizer.state_dict(),
-                "criterion" : criterion.state_dict(),
-                "loss": mean_val_loss
-            }
-            # change name of file and run in order to save more models
-            save_checkpoint(epoch, checkpoint, config["save_folder"]+config["model_name"]+"_checkpoint_1.pt")
+            # train on training data
+            mean_train_loss = train_model(train_loader, model, config["device"], optimizer, criterion)
+            train_epoch_loss.append(mean_train_loss)
 
-        if scheduler is not None:
-            scheduler.step(mean_val_loss)
+            # check validation loss, and print validation metrics
+            print("------------")
+            print("At epoch %d :" % epoch)
+            mean_val_loss, dice, iou = check_scores(val_loader, model, config["device"], criterion)
+            val_epoch_loss.append(mean_val_loss)
 
-        if early_stopping is not None:
-            early_stopping(mean_val_loss)
-            if early_stopping.early_stop:
-                break
+            # take scheduler step 
+            if scheduler is not None:
+                scheduler.step(mean_val_loss)
 
-        val_epoch_loss.append(mean_val_loss)
-        train_epoch_loss.append(mean_train_loss)
+            # save model after training
+            if epoch==config["num_epochs"]-1:
+                checkpoint = {
+                    "epoch": epoch,
+                    "state_dict": model.state_dict(),
+                    "optimizer" : optimizer.state_dict(),
+                    "criterion" : criterion.state_dict(),
+                    "loss": mean_val_loss
+                }
+                # change name of file and run in order to save more models
+                save_checkpoint(epoch, checkpoint, config["save_folder"]+config["model_name"]+f"_checkpoint_{model_idx}.pt")
 
-        # save examples to a folder
-        save_preds_as_imgs(
-            test_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/"+"/"+config["model_name"], device=config["device"]
-        )
-    
-    # save loss vs. epoch loss
-    loss_plot_name = "loss_" + config["model_name"]
-    plt.figure(figsize=(10, 7))
-    plt.plot(train_epoch_loss, color="blue", label="train loss")
-    plt.plot(val_epoch_loss, color="green", label="validataion loss")
-    plt.xlabel("Epochs")
-    plt.ylabel("Loss")
-    plt.title(config["model_name"] + "")
-    plt.legend()
-    #plt.savefig(f"/home/feliciaj/PolypSegmentation/loss_plots/{loss_plot_name}.png")
+            if early_stopping is not None:
+                early_stopping(mean_val_loss)
+                if early_stopping.early_stop:
+                    break
+
+            # save examples to a folder
+            save_preds_as_imgs(
+                test_loader, model, folder="/home/feliciaj/data/Kvasir-SEG/"+"/"+config["model_name"], device=config["device"]
+            )
+        
+        if config["plot_loss"] == True:
+            loss_plot_name = "loss_" + config["model_name"] + f"_{model_idx}"
+            plt.figure(figsize=(10, 7))
+            plt.plot(train_epoch_loss, color="blue", label="train loss")
+            plt.plot(val_epoch_loss, color="green", label="validataion loss")
+            plt.xlabel("Epochs")
+            plt.ylabel("Loss")
+            plt.title(config["model_name"] + "")
+            plt.legend()
+            plt.savefig(f"/home/feliciaj/PolypSegmentation/loss_plots/{loss_plot_name}.png")
         
 
 if __name__ == "__main__":

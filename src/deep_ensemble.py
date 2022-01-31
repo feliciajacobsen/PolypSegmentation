@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 # local imports
 from unet import UNet
+from doubleunet import DoubleUNet
 from dataloader import data_loaders
 from utils import (
     save_grid,  
@@ -56,11 +57,11 @@ class MyEnsemble(nn.Module):
 def test_ensembles():
     """
     Function loads trained models and make prediction on data from loader.
-    Only supports for ensemble_size=5 and model="unet" for now.
+    Only supports for ensemble_size=3.
 
     """
     save_folder = "/home/feliciaj/PolypSegmentation/ensembles/"
-    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/unet/"
+    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/doubleunet/"
 
     train_loader, val_loader, test_loader = data_loaders(
         batch_size=32, 
@@ -72,7 +73,7 @@ def test_ensembles():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     criterion = DiceLoss() 
-    model = UNet(in_channels=3, out_channels=1)
+    model = DoubleUNet() #UNet(in_channels=3, out_channels=1)
     ensemble_size = 3
   
     model_list = []
@@ -119,6 +120,7 @@ def test_ensembles():
 
             torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png")
             torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
+            torchvision.utils.save_image(x, f"{save_folder}/input_{batch}.png")
             save_grid(variance.permute(0,2,3,1), f"{save_folder}/heatmap_{batch}.png", rows=4, cols=8)
 
     print(f"IoU score: {iou/len(test_loader)}")
