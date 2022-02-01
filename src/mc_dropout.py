@@ -142,6 +142,7 @@ def get_monte_carlo_predictions(loader,forward_passes,model,n_classes,n_samples,
 
 def run_model(train=True):
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
+    save_plot_path = "/home/feliciaj/PolypSegmentation/figures/"
 
     train_transforms = A.Compose([
         A.Resize(height=256, width=256),
@@ -173,33 +174,55 @@ def run_model(train=True):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 
-    # Define networks
-    unets = [UNetClassifier(device=device, droprate=0, max_epoch=10),
-            UNetClassifier(device=device, droprate=0.3, max_epoch=10),
-            UNetClassifier(device=device, droprate=0.5, max_epoch=10),
-            ]
 
+    rates = [0, 0.3, 0.5]
+    unets = []
+    for rate in rates:
+        unets.append(UNetClassifier(device=device, droprate=rate, max_epoch=10))
 
     if train:        
         # Training, set verbose=True to see loss after each epoch.
         [unet.train_model(train_loader, val_loader, verbose=True) for unet in unets]
 
         # Save trained models
-        for idx, unet in enumerate(unets):
+        for rate, idx, unet in zip(rates, enumerate(unets)):
             torch.save(unet.model, save_path+"unet_"+str(idx)+".pt")
+
+            dice = unet.val_dice
             # Prepare to save dice
-            torch.save(unet.val_dice, "unet_val_dices.txt")
+            torch.save({
+                f"unet_{rate}_dropout": dice.state_dict(),
+            }, f"{save_plot_path}unet_dice_{idx}.pt")
+
             #unet.val_dice = list(map(str, unet.val_dice.numpy()))
 
         # Save test errors to plot figures 
-        open("unet_val_dices.txt","w").write("\n".join([",".join(unet.val_dice) for unet in unets])) 
+        #open("unet_val_dices.txt","w").write("\n".join([",".join(unet.val_dice) for unet in unets])) 
 
     # Load saved models to CPU
-    unet_models = [torch.load(save_path+"unet_"+str(idx)+".pt", map_location={'cuda:0': 'cpu'}) for idx in [0,1]]
+    #unet_models = [torch.load(save_path+"unet_"+str(idx)+".pt", map_location={'cuda:0': 'cpu'}) for idx in [0,1]]
 
     # Load saved test errors to plot figures.
-    unet_val_dices = [array.split(",") for array in open("unet_val_dices.txt","r").read().split("\n")]
-    unet_val_dices = np.array(unet_val_dices, dtype="f")
+    #unet_val_dices = [array.split(",") for array in open("unet_val_dices.txt","r").read().split("\n")]
+    #unet_val_dices = np.array(unet_val_dices, dtype="f")
+    
+    plt.figure(figsize=(8,7))
+    for unet, idx, rate in zip(unets, enumerate(rates)):
+        checkpoint = torch.load(f"{save_plot_path}unet_dice_{idx}.pt")
+        dice = unet.load_state_dict(checkpoint[f"unet_{rate}_dropout"], map_location="cpu")
+        label = f"U-Net with {rate:.2f}% dropout"
+        plt.plot(range(1,len(dice)+1), dice, ".-", label=label)
+        # force dropout layers to be on
+        # loop thorugh test loader
+        # predict
+        # get dice scores
+    plt.legend(loc="best");
+    plt.xlabel("Epochs");
+    plt.ylabel("Dice coefficient scores in validation set");
+    plt.title("Dice coefficient scores on validation set from Kvasir-SEG Dataset for all Networks")
+    plt.savefig("/home/feliciaj/PolypSegmentation/figures/unet.png")
+    
+    """
 
     labels = ["UNet no dropout","UNet with 30%% dropout","UNet with 50%% dropout"]
 
@@ -212,7 +235,7 @@ def run_model(train=True):
     plt.ylabel("Dice coefficient scores in validation set");
     plt.title("Dice coefficient scores on validation set from Kvasir-SEG Dataset for all Networks")
     plt.savefig("/home/feliciaj/PolypSegmentation/figures/unet.png")
-
+    """
 
 if __name__ == "__main__":
     run_model()
