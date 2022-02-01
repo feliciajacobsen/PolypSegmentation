@@ -95,9 +95,9 @@ class DoubleUNet(nn.Module):
     """
     Credit: https://github.com/HotVar/Image-segmentation-DoubleUNet/blob/main/model.py
     """
-    def __init__(self):
-        super().__init__(in_channels, out_channels)
-
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        
         self.VGG = nn.Sequential(
             VGGBlock(in_channels, 64, True),
             VGGBlock(64, 128, True),
@@ -110,14 +110,11 @@ class DoubleUNet(nn.Module):
         vgg19 = models.vgg19_bn()
         #vgg19.load_state_dict(torch.load(PATH_VGG19))
 
-        x = np.array([0,1,3,4])
-        for i, j in zip(range(5), np.array([7,7,13,6])):
-            self.VGG[i].conv[0].weights = vgg19.features[x[0]].weight
-            self.VGG[i].conv[1].weights = vgg19.features[x[1]].weight
-            self.VGG[i].conv[3].weights = vgg19.features[x[2]].weight
-            self.VGG[i].conv[4].weights = vgg19.features[x[3]].weight
-            x += j
-
+        for i, j in zip(range(5), np.array([0,7,14,27,33])):
+            self.VGG[i].conv[0].weights = vgg19.features[0+j].weight
+            self.VGG[i].conv[1].weights = vgg19.features[1+j].weight
+            self.VGG[i].conv[3].weights = vgg19.features[3+j].weight
+            self.VGG[i].conv[4].weights = vgg19.features[4+j].weight
         del vgg19
 
         self.aspp1 = ASPP(512, 512)
@@ -214,7 +211,7 @@ class DoubleUNet(nn.Module):
 def test():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     x = torch.randn((3, 1, 160, 160)).to(device)
-    model = UNet(in_channels=1, out_channels=1).to(device)
+    model = DoubleUNet(in_channels=1, out_channels=1).to(device)
     preds = model(x)
     print(preds.shape)
     print(x.shape)
@@ -222,7 +219,7 @@ def test():
 
 if __name__ == "__main__":
     x = torch.randn((2, 3, 256, 256)) 
-    model = DoubleUNet()
+    model = DoubleUNet(in_channels=3, out_channels=1)
     preds = model(x)
     print(preds.shape)
    
