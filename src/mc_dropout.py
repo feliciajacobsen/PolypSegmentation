@@ -185,7 +185,7 @@ def run_model(train=True):
         [unet.train_model(train_loader, val_loader, verbose=True) for unet in unets]
 
         # Save trained models
-        for rate, idx, unet in zip(rates, enumerate(unets)):
+        for rate, (idx, unet) in zip(rates, enumerate(unets)):
             torch.save(unet.model, save_path+"unet_"+str(idx)+".pt")
 
             dice = unet.val_dice

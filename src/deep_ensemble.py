@@ -17,31 +17,35 @@ from utils import (
 from metrics import DiceLoss, dice_coef, iou_score
 
 
-class MyEnsemble(nn.Module):
-    """
+class DeepEnsemble(nn.Module):
+        """
     Ensemble of pretrained models.
 
     Args:
-        model A-E (.pt-file): files of saved models.
-        device (string): device to get models from.
+        model (torch object): deep learning object.
+        ensemble_size (int): no. of deep learning objects.
+        device (cuda object): device load models from.
 
     Returns:
         mean_pred (tensor): mean predicted mask by ensemble models of size (B,C,H,W).
         variance (tensor): normalized variance tensor of predicted mask of size (B,C,H,W).
     """
-    def __init__(self, modelA, modelB, modelC, device):
-        super(MyEnsemble, self).__init__()
+    def __init__(self, model, ensemble_size, device):
+        super(DeepEnsemble, self).__init__()
 
-        self.modelA = modelA.to(device)
-        self.modelB = modelB.to(device)
-        self.modelC = modelC.to(device)
+        self.model_list = []
+        for i in range(ensemble_size):
+            self.model_list.append(model)
+
+        for model in self.model_list:
+            model.to(device)
     
     def forward(self, x):
-        x1 = self.modelA(x.clone()) # pred from model A
-        x2 = self.modelB(x.clone()) # pred from model B
-        x3 = self.modelC(x.clone()) # pred from model C
-        
-        outputs = torch.stack([x1, x2, x3])
+        inputs = []
+        for model in self.model_list:
+            inputs.append(model(x.clone()))
+        outputs = torch.stack(inputs)
+    
         mean = torch.mean(outputs, dim=0).double() # element wise mean from outout of ensemble models
         pred = torch.sigmoid(outputs)
         mean_pred = torch.sigmoid(mean).float() # only extract class prob
@@ -81,10 +85,8 @@ def test_ensembles():
         model.load_state_dict(checkpoint["state_dict"], strict=False)
     
     model.eval()
+    model = DeepEnsemble(model, ensemble_size, device)
 
-    model = MyEnsemble(
-        model, model, model, device=device
-    )
     dice = 0
     iou = 0
     with torch.no_grad():
