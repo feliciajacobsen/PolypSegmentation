@@ -18,7 +18,7 @@ from metrics import DiceLoss, dice_coef, iou_score
 
 
 class DeepEnsemble(nn.Module):
-        """
+    """
     Ensemble of pretrained models.
 
     Args:
@@ -30,7 +30,7 @@ class DeepEnsemble(nn.Module):
         mean_pred (tensor): mean predicted mask by ensemble models of size (B,C,H,W).
         variance (tensor): normalized variance tensor of predicted mask of size (B,C,H,W).
     """
-    def __init__(self, model, ensemble_size, device):
+    def __init__(self, model, ensemble_size: int, device: str):
         super(DeepEnsemble, self).__init__()
 
         self.model_list = []
