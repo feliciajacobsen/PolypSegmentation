@@ -74,13 +74,21 @@ class UNetClassifier():
 
         return self.val_dice
     
-    def test_model(self, x): 
+    def test_model(self, test_loader, forward_passes): 
         model = self.model.eval()
+        enable_dropout(model)
+        dice = 0
         with torch.no_grad():
-            prob = torch.sigmoid(model(x))
-            pred = (prob > 0.5).float()
+            for x, y in test_loader:
+                x = x.to(device=device)
+                y = y.to(device=device).unsqueeze(1)
+                prob = torch.sigmoid(model(x))
+                pred = (prob > 0.5).float()
+                dice += dice_coef(pred, y)
+
         model = self.model.train()
-        return pred
+        return pred, variance, dice/len(test_loader)
+    
 
 
 def enable_dropout(model):
@@ -92,8 +100,7 @@ def enable_dropout(model):
             m.train()
 
 
-
-def get_monte_carlo_predictions(loader,forward_passes,model,n_classes,n_samples,device):
+def get_monte_carlo_predictions(loader, forward_passes, model, n_classes, n_samples, device):
     """ 
     Function to get the monte-carlo samples and uncertainty estimates
     through multiple forward passes
@@ -113,7 +120,7 @@ def get_monte_carlo_predictions(loader,forward_passes,model,n_classes,n_samples,
     """
 
     dropout_predictions = np.empty((0, n_samples, n_classes))
-    softmax = nn.Softmax(dim=1)
+
     for i in range(forward_passes):
         preds = np.empty((0, n_classes))
         # set non-dropout layers to eval mode
@@ -121,12 +128,11 @@ def get_monte_carlo_predictions(loader,forward_passes,model,n_classes,n_samples,
         # set dropout layers to train mode
         enable_dropout(model)
         for batch, (x, y) in enumerate(loader):
-            image = image.to(torch.device('cuda'))
-
+            image = image.to(device)
             with torch.no_grad():
                 output = model(x)
                 prob = torch.sigmoid(output) # shape (n_samples, n_classes)
-                prediction = (output > 0.5).float()
+            
             preds = np.vstack((prob, output.cpu().numpy()))
         dropout_preds = np.vstack((dropout_preds,
                                          preds[np.newaxis, :, :]))
@@ -141,7 +147,7 @@ def get_monte_carlo_predictions(loader,forward_passes,model,n_classes,n_samples,
 
 
 def run_model(max_epoch, save_path: str, save_plot_path: str, train=False, rates = [0, 0.3, 0.5]):
-
+    # data augmentations
     train_transforms = A.Compose([
         A.Resize(height=256, width=256),
         A.RGBShift(r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=0.9),
@@ -177,7 +183,7 @@ def run_model(max_epoch, save_path: str, save_plot_path: str, train=False, rates
         unets.append(UNetClassifier(device=device, droprate=rate, max_epoch=max_epoch))
 
     if train:        
-        # Training, set verbose=True to see loss after each epoch.
+        # Training, set verbose=True to see loss after each epoch
         [unet.train_model(train_loader, val_loader, verbose=True) for unet in unets]
 
         # Save trained models
@@ -185,6 +191,12 @@ def run_model(max_epoch, save_path: str, save_plot_path: str, train=False, rates
             torch.save(unet.model, save_path+f"unet_{idx}.pt")
             torch.save(unet.val_dice, save_path+f"unet_val_dices_{idx}.pt")
             
+            if test:
+                test_dices = []
+                model = torch.load(save_path+f"unet_{idx}.pt", map_location=torch.device("cpu"))
+                for epoch in max_epoch:
+                    test_dice = test_model(test_loader)
+                    test_dices.append(test_dice)
 
     plt.figure(figsize=(8,7))
     for idx, (rate, unet) in enumerate(zip(rates, unets)):
@@ -192,16 +204,20 @@ def run_model(max_epoch, save_path: str, save_plot_path: str, train=False, rates
         dices = torch.load(save_path+f"unet_val_dices_{idx}.pt", map_location=torch.device("cpu"))
         if rate==0:
             label="U-Net no dropout"
-        label = f"U-Net dropout rate={rate:.1f}"
+        else:
+            label = f"U-Net dropout rate={rate:.1f}"
         plt.plot(range(1,len(dices)+1), dices, ".-", label=label)
+
+        if test:
+            plt.plot(range(1,len(dices)+1), test_dices, "._", label=label+" on test data")
         # force dropout layers to be on
         # loop through test loader
         # predict
         # get dice scores
     plt.legend(loc="best");
     plt.xlabel("Epochs");
-    plt.ylabel("Dice coefficient on validation set");
-    plt.title("Dice coefficient scores on validation set from Kvasir-SEG Dataset for all Networks")
+    plt.ylabel("Dice coefficient");
+    plt.title("Dice coefficient scores from Kvasir-SEG Dataset for all Networks")
     plt.savefig(save_plot_path+"unet.png")
 
 
@@ -209,5 +225,5 @@ if __name__ == "__main__":
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
     save_plot_path = "/home/feliciaj/PolypSegmentation/figures/"
     max_epoch = 150
-    rates = [0, 0.3, 0.5]
+    rates = [0, 0.1, 0.2]
     run_model(max_epoch, save_path, save_plot_path, True, rates)
