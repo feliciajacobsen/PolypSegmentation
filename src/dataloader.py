@@ -1,13 +1,10 @@
 import os
 import torch
 from PIL import Image
-from torch.utils.data import Dataset
-import numpy as np
-import math
+from torch.utils.data import Dataset, DataLoader
 import torchvision
-from torch.utils.data import DataLoader, random_split
-from torch.nn.utils.rnn import pack_sequence, pad_sequence
-import albumentations as A
+import numpy as np
+import shutil
 
 seed = 24
 torch.manual_seed(seed)
@@ -17,6 +14,7 @@ class KvasirSEGDataset(Dataset):
     """
     Class provides with image and mask, or alternatively
     give an transformed/augmented version of these.
+
     """
     def __init__(self, image_dir, mask_dir, transform=None):
         self.image_dir = image_dir
@@ -101,7 +99,7 @@ def data_loaders(batch_size, train_transforms, val_transforms, num_workers, pin_
 
 
 
-def move_images():
+def move_images(train_frac=0.8, test_frac=0.1):
     """
     Function takes dataset containing image and corresponding mask, 
     and splits into folders for train, val and test data.
@@ -124,8 +122,6 @@ def move_images():
         if not os.path.exists(d):
             os.makedirs(d)
 
-    train_frac = 0.8
-
     N = len(data_set) # number of images
     perm = np.random.permutation(N)
     filenames = np.array(os.listdir(base_path + "images/"))[perm] # shuffle filenames for randomness
@@ -133,7 +129,7 @@ def move_images():
     for i, f in enumerate(filenames):
         if (i < train_frac * N):
             middle_path = "train/train_"
-        elif (i > train_frac * N):
+        elif (i < (test_frac + test_frac) * N):
             middle_path = "test/test_"    
         else:
             middle_path = "val/val_"
@@ -154,7 +150,7 @@ def move_images():
 
 if __name__ == "__main__":
     #move_images() # only run this once to split data
-    PolypDataset(image_dir="/home/feliciaj/data/Kvasir-SEG/images/", mask_dir="/home/feliciaj/data/Kvasir-SEG/masks/")
+    KvasirSEGDataset(image_dir="/home/feliciaj/data/Kvasir-SEG/images/", mask_dir="/home/feliciaj/data/Kvasir-SEG/masks/")
    
 
 

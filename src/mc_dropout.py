@@ -146,6 +146,11 @@ def test_MC_model(loader, forward_passes, model, device, save_folder):
     print(f"IoU score: {iou/len(loader)}")
     print(f"Dice score: {dice/len(loader)}")
 
+    return dice/len(loader), iou/len(loader)
+
+def plot_dropout_vs_forward_passes():
+
+
 
 def plot_dropout_models(max_epoch, loaders, save_path: str, save_plot_path: str, train=False, rates = [0, 0.3, 0.5]):
     train_loader, val_loader, test_loader = loaders
