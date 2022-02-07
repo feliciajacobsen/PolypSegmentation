@@ -9,7 +9,6 @@ import numpy as np
 from utils.modules import SE_Block, ASPP, Res_Shortcut
 
 
-
 class VGGBlock(nn.Module):
     def __init__(self, in_channels, out_channels, is_enc=True, residual=False):
         super().__init__()
@@ -21,9 +20,8 @@ class VGGBlock(nn.Module):
             nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
-            SE_Block(out_channels, 8)
+            SE_Block(out_channels, 8),
         )
-
 
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.shortcut = Res_Shortcut(in_channels, out_channels)
@@ -33,7 +31,7 @@ class VGGBlock(nn.Module):
 
     def forward(self, x):
         y = self.conv(x)
- 
+
         if self.residual:
             y = y + self.shortcut(x)
 
@@ -55,15 +53,23 @@ class ASPP(nn.Module):
             nn.ReLU(inplace=True),
             nn.BatchNorm2d(out_channels),
         )
-        
 
         self.aspp_blocks = nn.ModuleList()
         for rate in [6, 12, 18]:
-            self.aspp_blocks.append(nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=1, padding=rate, dilation=rate),
-            nn.ReLU(inplace=True),
-            nn.BatchNorm2d(out_channels),
-        ))
+            self.aspp_blocks.append(
+                nn.Sequential(
+                    nn.Conv2d(
+                        in_channels,
+                        out_channels,
+                        kernel_size=3,
+                        stride=1,
+                        padding=rate,
+                        dilation=rate,
+                    ),
+                    nn.ReLU(inplace=True),
+                    nn.BatchNorm2d(out_channels),
+                )
+            )
 
         self.output = nn.Conv2d(out_channels * 5, out_channels, kernel_size=1)
 
@@ -73,7 +79,7 @@ class ASPP(nn.Module):
 
         y_pool0 = nn.AdaptiveAvgPool2d(output_size=1)(x)
         y_conv0 = self.conv_block(y_pool0)
-        y_conv0 = nn.Upsample(size=(h, w), mode='bilinear')(y_conv0)
+        y_conv0 = nn.Upsample(size=(h, w), mode="bilinear")(y_conv0)
         y_conv1 = self.conv_block(x)
         y_conv2 = self.aspp_blocks[0](x)
         y_conv3 = self.aspp_blocks[1](x)
@@ -95,37 +101,38 @@ class DoubleUNet(nn.Module):
     """
     Credit: https://github.com/HotVar/Image-segmentation-DoubleUNet/blob/main/model.py
     """
+
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        
+
         self.VGG = nn.Sequential(
             VGGBlock(in_channels, 64, True),
             VGGBlock(64, 128, True),
             VGGBlock(128, 256, True),
             VGGBlock(256, 512, True),
-            VGGBlock(512, 512, True)
+            VGGBlock(512, 512, True),
         )
 
         # apply pretrained vgg19 weights on 1st unet
         vgg19 = models.vgg19_bn()
-        #vgg19.load_state_dict(torch.load(PATH_VGG19))
+        # vgg19.load_state_dict(torch.load(PATH_VGG19))
 
-        for i, j in zip(range(5), np.array([0,7,14,27,33])):
-            self.VGG[i].conv[0].weights = vgg19.features[0+j].weight
-            self.VGG[i].conv[1].weights = vgg19.features[1+j].weight
-            self.VGG[i].conv[3].weights = vgg19.features[3+j].weight
-            self.VGG[i].conv[4].weights = vgg19.features[4+j].weight
+        for i, j in zip(range(5), np.array([0, 7, 14, 27, 33])):
+            self.VGG[i].conv[0].weights = vgg19.features[0 + j].weight
+            self.VGG[i].conv[1].weights = vgg19.features[1 + j].weight
+            self.VGG[i].conv[3].weights = vgg19.features[3 + j].weight
+            self.VGG[i].conv[4].weights = vgg19.features[4 + j].weight
         del vgg19
 
         self.aspp1 = ASPP(512, 512)
 
-        self.up = nn.Upsample(scale_factor=2, mode='bilinear')
+        self.up = nn.Upsample(scale_factor=2, mode="bilinear")
 
         self.decoder1 = nn.Sequential(
-            VGGBlock(1024, 256, False), 
+            VGGBlock(1024, 256, False),
             VGGBlock(512, 128, False),
             VGGBlock(256, 64, False),
-            VGGBlock(128, 32, False)
+            VGGBlock(128, 32, False),
         )
 
         self.output1 = output_block()
@@ -135,7 +142,7 @@ class DoubleUNet(nn.Module):
             VGGBlock(64, 128, True, True),
             VGGBlock(128, 256, True, True),
             VGGBlock(256, 512, True, True),
-            VGGBlock(512, 512, True, True)
+            VGGBlock(512, 512, True, True),
         )
 
         self.aspp2 = ASPP(512, 512)
@@ -144,12 +151,14 @@ class DoubleUNet(nn.Module):
             VGGBlock(1536, 256, False, True),
             VGGBlock(768, 128, False, True),
             VGGBlock(384, 64, False, True),
-            VGGBlock(192, 32, False, True)
+            VGGBlock(192, 32, False, True),
         )
 
         self.output2 = output_block()
 
-        self.output = nn.Conv2d(in_channels=2, out_channels=out_channels, kernel_size=(1, 1))
+        self.output = nn.Conv2d(
+            in_channels=2, out_channels=out_channels, kernel_size=(1, 1)
+        )
 
     def forward(self, _input):
         # encoder of 1st unet
@@ -203,7 +212,7 @@ class DoubleUNet(nn.Module):
         # output of 2nd unet
         output2 = self.output2(y_dec2_0)
 
-        outputs = torch.cat([output1,output2], dim=1)
+        outputs = torch.cat([output1, output2], dim=1)
 
         return self.output(outputs)
 
@@ -217,9 +226,9 @@ def test():
     print(x.shape)
     assert preds.shape == x.shape
 
+
 if __name__ == "__main__":
-    x = torch.randn((2, 3, 256, 256)) 
+    x = torch.randn((2, 3, 256, 256))
     model = DoubleUNet(in_channels=3, out_channels=1)
     preds = model(x)
     print(preds.shape)
-   

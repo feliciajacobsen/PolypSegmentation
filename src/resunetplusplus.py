@@ -1,4 +1,4 @@
-import torch 
+import torch
 import torch.nn as nn
 from utils.modules import ASPP, SE_Block, Res_Conv, Attention_Block
 
@@ -47,7 +47,6 @@ class ResUnetPlusPlus(nn.Module):
 
         self.output_layer = nn.Conv2d(filters[0], out_channels, 1)
 
-
     def forward(self, x):
         x1 = self.input_layer(x) + self.input_skip(x)
 
@@ -83,11 +82,9 @@ class ResUnetPlusPlus(nn.Module):
         return out
 
 
-
 if __name__ == "__main__":
-    x = torch.randn((2, 3, 256, 256)) 
+    x = torch.randn((2, 3, 256, 256))
     model = ResUnetPlusPlus(in_channels=3, out_channels=1)
     preds = model(x)
     print(preds.shape)
     print(x.shape)
-    
