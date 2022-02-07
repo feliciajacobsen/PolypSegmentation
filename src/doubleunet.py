@@ -6,7 +6,7 @@ import torchvision.transforms.functional as TF
 
 import numpy as np
 
-from modules import SE_Block, ASPP, Res_Shortcut
+from utils.modules import SE_Block, ASPP, Res_Shortcut
 
 
 

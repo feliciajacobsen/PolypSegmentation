@@ -8,13 +8,16 @@ from albumentations.pytorch import ToTensorV2
 # local imports
 from unet import UNet
 from doubleunet import DoubleUNet
-from dataloader import data_loaders
-from utils import (
+from utils.dataloader import data_loaders
+from utils.utils import (
     save_grid,  
     standard_transforms
 )
-
-from metrics import DiceLoss, dice_coef, iou_score
+from utils.metrics import (
+    DiceLoss, 
+    dice_coef, 
+    iou_score
+)
 
 
 class DeepEnsemble(nn.Module):

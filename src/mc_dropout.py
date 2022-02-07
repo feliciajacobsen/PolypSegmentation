@@ -15,10 +15,9 @@ from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
 from unet import UNet_dropout, UNet
 
-from dataloader import data_loaders
-
-from utils import check_scores, save_grid, standard_transforms
-from metrics import dice_coef, iou_score, DiceLoss
+from utils.dataloader import data_loaders
+from utils.utils import check_scores, save_grid, standard_transforms
+from utils.metrics import dice_coef, iou_score, DiceLoss
 
 
 class UNetClassifier():
@@ -148,8 +147,34 @@ def test_MC_model(loader, forward_passes, model, device, save_folder):
 
     return dice/len(loader), iou/len(loader)
 
-def plot_dropout_vs_forward_passes():
 
+def plot_dropout_vs_forward_passes(forward_passes, save_plot_path, load_model_path):
+
+    train_loader, val_loader, test_loader = data_loaders(
+        batch_size=32, 
+        train_transforms=None, 
+        val_transforms=standard_transforms(256,256), 
+        num_workers=4, 
+        pin_memory=True
+    )
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = torch.load(save_path+"unet_1.pt")
+    save_folder = "/home/feliciaj/PolypSegmentation/results/mc_dropout/"
+    dice, iou = [], []
+    for passes in range(forward_passes):
+        dice, iou = test_MC_model(test_loader, passes, model, device, save_folder)
+        dice.append(dice)
+        iou.append(iou)
+
+    plt.figure(figsize=(8,7))
+    plt.plot(range(1,len(forward_passes)+1), dice, ".-", label="Dice coeff")
+    plt.plot(range(1,len(forward_passes)+1), iou, ".-", label="IoU")
+    plt.legend(loc="best");
+    plt.xlabel("Number of networks");
+    plt.ylabel("Score");
+    plt.title(f"Dice and IoU scores with MC droput of droprate=0.1 with {forward_passes} number of U-Nets")
+    plt.savefig(save_plot_path+f"unet_dropout_{forward_passes}_models.png")
 
 
 def plot_dropout_models(max_epoch, loaders, save_path: str, save_plot_path: str, train=False, rates = [0, 0.3, 0.5]):
@@ -190,7 +215,7 @@ def plot_dropout_models(max_epoch, loaders, save_path: str, save_plot_path: str,
 
 if __name__ == "__main__":
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
-    save_plot_path = "/home/feliciaj/PolypSegmentation/figures/"
+    save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
     max_epoch = 150
     rates = [0, 0.1, 0.2]
        
@@ -227,5 +252,7 @@ if __name__ == "__main__":
     train_loader, val_loader, test_loader = loaders
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = torch.load(save_path+"unet_1.pt")
-    save_folder = "/home/feliciaj/PolypSegmentation/mc_dropout/"
+    save_folder = "/home/feliciaj/PolypSegmentation/results/mc_dropout/"
     test_MC_model(test_loader, 30, model, device, save_folder)
+
+    plot_dropout_vs_forward_passes(50, save_plot_path)

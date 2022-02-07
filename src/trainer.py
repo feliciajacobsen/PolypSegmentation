@@ -10,8 +10,8 @@ import matplotlib.pyplot as plt
 from unet import UNet, UNet_dropout
 from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
-from dataloader import data_loaders
-from utils import (
+from utils.dataloader import data_loaders
+from utils.utils import (
     check_scores, 
     load_checkpoint, 
     save_checkpoint, 
@@ -20,7 +20,7 @@ from utils import (
     standard_transforms
 )
 
-from metrics import (
+from utils.metrics import (
     BCEDiceLoss,
     DiceLoss
 )

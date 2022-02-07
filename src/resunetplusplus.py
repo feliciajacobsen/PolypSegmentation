@@ -1,6 +1,6 @@
 import torch 
 import torch.nn as nn
-from modules import ASPP, SE_Block, Res_Conv, Attention_Block
+from utils.modules import ASPP, SE_Block, Res_Conv, Attention_Block
 
 
 class ResUnetPlusPlus(nn.Module):
