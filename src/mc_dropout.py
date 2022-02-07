@@ -100,7 +100,7 @@ def enable_dropout(model):
             m.train()
 
 
-def get_monte_carlo_predictions(loader, forward_passes, model, n_classes, n_samples, device):
+def test_MC_model(loader, forward_passes, model, device, save_folder):
     """ 
     Function to get the monte-carlo samples and uncertainty estimates
     through multiple forward passes
@@ -113,41 +113,82 @@ def get_monte_carlo_predictions(loader, forward_passes, model, n_classes, n_samp
         number of monte-carlo models
     model : object
         pytorch model
-    n_classes : int
-        number of classes in the dataset
-    n_samples : int
-        number of samples in the test set
+    device : str
+        cuda object
     """
 
-    dropout_predictions = np.empty((0, n_samples, n_classes))
-
-    for i in range(forward_passes):
-        preds = np.empty((0, n_classes))
+    dice, iou = 0, 0
+    for batch, (x, y) in enumerate(loader):
+        preds = []
+        x = x.to(device)
+        y = y.to(device).unsqueeze(1)
         # set non-dropout layers to eval mode
         model.eval() 
         # set dropout layers to train mode
         enable_dropout(model)
-        for batch, (x, y) in enumerate(loader):
-            image = image.to(device)
+        for i in range(forward_passes):    
             with torch.no_grad():
                 output = model(x)
-                prob = torch.sigmoid(output) # shape (n_samples, n_classes)
-            
-            preds = np.vstack((prob, output.cpu().numpy()))
-        dropout_preds = np.vstack((dropout_preds,
-                                         preds[np.newaxis, :, :]))
-        # dropout preds - shape (forward_passes, n_samples, n_classes)
+                prob = torch.sigmoid(output) 
+                preds.append(prob)
+        outputs = torch.stack(preds)
+        mean = torch.mean(outputs, dim=0).double()
+        variance = torch.mean((outputs**2 - mean), dim=0).double().cpu()
+
+        mean_pred = (mean > 0.5).float() 
+        dice += dice_coef(mean_pred, y)
+        iou += iou_score(mean_pred, y)
         
-    # Calculating mean across forward passes
-    mean = np.mean(dropout_preds, axis=0) # shape (n_samples, n_classes)
+        torchvision.utils.save_image(mean_pred, f"{save_folder}/pred_{batch}.png")
+        torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
+        save_grid(variance.permute(0,2,3,1), f"{save_folder}/heatmap_{batch}.png", rows=4, cols=8)
 
-    # Calculating variance across forward passes
-    variance = np.var(dropout_preds, axis=0) # shape (n_samples, n_classes)
+    print(f"IoU score: {iou/len(loader)}")
+    print(f"Dice score: {dice/len(loader)}")
 
 
+def plot_dropout_models(max_epoch, loaders, save_path: str, save_plot_path: str, train=False, rates = [0, 0.3, 0.5]):
+    train_loader, val_loader, test_loader = loaders
 
-def run_model(max_epoch, save_path: str, save_plot_path: str, train=False, rates = [0, 0.3, 0.5]):
-    # data augmentations
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+
+    unets = []
+    for rate in rates:
+        unets.append(UNetClassifier(device=device, droprate=rate, max_epoch=max_epoch))
+
+    if train:        
+        # Training, set verbose=True to see loss after each epoch
+        [unet.train_model(train_loader, val_loader, verbose=True) for unet in unets]
+
+        # Save trained models
+        for idx, (rate, unet) in enumerate(zip(rates, unets)):
+            torch.save(unet.model, save_path+f"unet_{idx}.pt")
+            torch.save(unet.val_dice, save_path+f"unet_val_dices_{idx}.pt")
+            
+
+    plt.figure(figsize=(8,7))
+    for idx, (rate, unet) in enumerate(zip(rates, unets)):
+        #model = torch.load(save_path+f"unet_{idx}.pt")
+        dices = torch.load(save_path+f"unet_val_dices_{idx}.pt", map_location=torch.device("cpu"))
+        if rate==0:
+            label="U-Net no dropout"
+        else:
+            label = f"U-Net dropout rate={rate:.1f}"
+        plt.plot(range(1,len(dices)+1), dices, ".-", label=label)
+
+    plt.legend(loc="best");
+    plt.xlabel("Epochs");
+    plt.ylabel("Dice coefficient");
+    plt.title("Dice coefficient scores from Kvasir-SEG Dataset for all Networks")
+    plt.savefig(save_plot_path+"unet.png")
+
+
+if __name__ == "__main__":
+    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
+    save_plot_path = "/home/feliciaj/PolypSegmentation/figures/"
+    max_epoch = 150
+    rates = [0, 0.1, 0.2]
+       
     train_transforms = A.Compose([
         A.Resize(height=256, width=256),
         A.RGBShift(r_shift_limit=25, g_shift_limit=25, b_shift_limit=25, p=0.9),
@@ -168,7 +209,7 @@ def run_model(max_epoch, save_path: str, save_plot_path: str, train=False, rates
         ToTensorV2(),
     ])
 
-    train_loader, val_loader, test_loader = data_loaders(
+    loaders = data_loaders(
         batch_size=32, 
         train_transforms=train_transforms, 
         val_transforms=standard_transforms(256,256), 
@@ -176,54 +217,10 @@ def run_model(max_epoch, save_path: str, save_plot_path: str, train=False, rates
         pin_memory=True
     )
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
+    #plot_dropout_models(max_epoch, loaders, save_path, save_plot_path, False, rates)
 
-    unets = []
-    for rate in rates:
-        unets.append(UNetClassifier(device=device, droprate=rate, max_epoch=max_epoch))
-
-    if train:        
-        # Training, set verbose=True to see loss after each epoch
-        [unet.train_model(train_loader, val_loader, verbose=True) for unet in unets]
-
-        # Save trained models
-        for idx, (rate, unet) in enumerate(zip(rates, unets)):
-            torch.save(unet.model, save_path+f"unet_{idx}.pt")
-            torch.save(unet.val_dice, save_path+f"unet_val_dices_{idx}.pt")
-            
-            if test:
-                test_dices = []
-                model = torch.load(save_path+f"unet_{idx}.pt", map_location=torch.device("cpu"))
-                for epoch in max_epoch:
-                    test_dice = test_model(test_loader)
-                    test_dices.append(test_dice)
-
-    plt.figure(figsize=(8,7))
-    for idx, (rate, unet) in enumerate(zip(rates, unets)):
-        #model = torch.load(save_path+f"unet_{idx}.pt")
-        dices = torch.load(save_path+f"unet_val_dices_{idx}.pt", map_location=torch.device("cpu"))
-        if rate==0:
-            label="U-Net no dropout"
-        else:
-            label = f"U-Net dropout rate={rate:.1f}"
-        plt.plot(range(1,len(dices)+1), dices, ".-", label=label)
-
-        if test:
-            plt.plot(range(1,len(dices)+1), test_dices, "._", label=label+" on test data")
-        # force dropout layers to be on
-        # loop through test loader
-        # predict
-        # get dice scores
-    plt.legend(loc="best");
-    plt.xlabel("Epochs");
-    plt.ylabel("Dice coefficient");
-    plt.title("Dice coefficient scores from Kvasir-SEG Dataset for all Networks")
-    plt.savefig(save_plot_path+"unet.png")
-
-
-if __name__ == "__main__":
-    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
-    save_plot_path = "/home/feliciaj/PolypSegmentation/figures/"
-    max_epoch = 150
-    rates = [0, 0.1, 0.2]
-    run_model(max_epoch, save_path, save_plot_path, True, rates)
+    train_loader, val_loader, test_loader = loaders
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = torch.load(save_path+"unet_1.pt")
+    save_folder = "/home/feliciaj/PolypSegmentation/mc_dropout/"
+    test_MC_model(test_loader, 30, model, device, save_folder)

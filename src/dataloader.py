@@ -108,13 +108,15 @@ def move_images():
 
     Mask must have equal filename as its corresponding image.
     """
-    data_set = PolypDataset("/home/feliciaj/data/Kvasir-SEG/images/", "/home/feliciaj/data/Kvasir-SEG/masks/", transform=None)
+    data_set = KvasirSEGDataset("/home/feliciaj/data/Kvasir-SEG/images/", "/home/feliciaj/data/Kvasir-SEG/masks/", transform=None)
 
     base_path = "/home/feliciaj/data/Kvasir-SEG/"
 
     dirs = [
         base_path+"train/train_images/", 
         base_path+"train/train_masks/", 
+        base_path+"test/test_images/", 
+        base_path+"test/test_masks/", 
         base_path+"val/val_images/", 
         base_path+"val/val_masks/"
     ]
@@ -123,7 +125,6 @@ def move_images():
             os.makedirs(d)
 
     train_frac = 0.8
-    val_frac = 0.2
 
     N = len(data_set) # number of images
     perm = np.random.permutation(N)
@@ -132,6 +133,8 @@ def move_images():
     for i, f in enumerate(filenames):
         if (i < train_frac * N):
             middle_path = "train/train_"
+        elif (i > train_frac * N):
+            middle_path = "test/test_"    
         else:
             middle_path = "val/val_"
 

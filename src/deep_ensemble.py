@@ -87,8 +87,7 @@ def test_ensembles():
     model.eval()
     model = DeepEnsemble(model, ensemble_size, device)
 
-    dice = 0
-    iou = 0
+    dice, iou = 0, 0
     with torch.no_grad():
         for batch, (x, y) in enumerate(test_loader):
             y = y.to(device=device).unsqueeze(1)
