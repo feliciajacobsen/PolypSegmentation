@@ -76,7 +76,7 @@ def run_model():
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     config["load_model"] = False
-    config["plot_loss"] = False
+    config["plot_loss"] = True
     config["num_epochs"] = 150
     config["in_channels"] = 3
     config["numcl"] = 1 # no of classes/output channels
@@ -86,7 +86,7 @@ def run_model():
     config["image_height"] = 256
     config["image_width"] = 256
     config["num_models"] = 5 # no. of models to train at once
-    config["model_name"] = "unet"
+    config["model_name"] = "resunet++"
     config["save_folder"] = "/home/feliciaj/PolypSegmentation/saved_models/" + config["model_name"] + "/"
 
     if config["model_name"]=="unet":
@@ -185,7 +185,7 @@ def run_model():
             plt.ylabel("Loss")
             plt.title(config["model_name"] + "")
             plt.legend()
-            plt.savefig(f"/home/feliciaj/PolypSegmentation/loss_plots/{loss_plot_name}.png")
+            plt.savefig(f"/home/feliciaj/PolypSegmentation/results/loss_plots/{loss_plot_name}.png")
         
 
 if __name__ == "__main__":

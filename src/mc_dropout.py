@@ -15,6 +15,7 @@ from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
 from unet import UNet_dropout, UNet
 
+# import from utils subfolder
 from utils.dataloader import data_loaders
 from utils.utils import check_scores, save_grid, standard_transforms
 from utils.metrics import dice_coef, iou_score, DiceLoss
@@ -159,17 +160,17 @@ def plot_dropout_vs_forward_passes(forward_passes, save_plot_path, load_model_pa
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = torch.load(save_path+"unet_1.pt")
+    model = torch.load(load_model_path)
     save_folder = "/home/feliciaj/PolypSegmentation/results/mc_dropout/"
-    dice, iou = [], []
-    for passes in range(forward_passes):
+    dice_list, iou_list = [], []
+    for passes in range(1, forward_passes+1):
         dice, iou = test_MC_model(test_loader, passes, model, device, save_folder)
-        dice.append(dice)
-        iou.append(iou)
+        dice_list.append(dice)
+        iou_list.append(iou)
 
     plt.figure(figsize=(8,7))
-    plt.plot(range(1,len(forward_passes)+1), dice, ".-", label="Dice coeff")
-    plt.plot(range(1,len(forward_passes)+1), iou, ".-", label="IoU")
+    plt.plot(range(1,forward_passes+1), dice_list, ".-", label="Dice coeff")
+    plt.plot(range(1,forward_passes+1), iou_list, ".-", label="IoU")
     plt.legend(loc="best");
     plt.xlabel("Number of networks");
     plt.ylabel("Score");
@@ -254,5 +255,5 @@ if __name__ == "__main__":
     model = torch.load(save_path+"unet_1.pt")
     save_folder = "/home/feliciaj/PolypSegmentation/results/mc_dropout/"
     test_MC_model(test_loader, 30, model, device, save_folder)
-
-    plot_dropout_vs_forward_passes(50, save_plot_path)
+    load_model_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_1.pt"
+    plot_dropout_vs_forward_passes(50, save_plot_path, load_model_path)

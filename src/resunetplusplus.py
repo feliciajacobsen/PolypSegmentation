@@ -5,7 +5,7 @@ from utils.modules import ASPP, SE_Block, Res_Conv, Attention_Block
 
 class ResUnetPlusPlus(nn.Module):
     def __init__(self, in_channels, out_channels, filters=[32, 64, 128, 256, 512]):
-        super(Res_Unet_Plus_Plus, self).__init__()
+        super(ResUnetPlusPlus, self).__init__()
 
         self.input_layer = nn.Sequential(
             nn.Conv2d(in_channels, filters[0], kernel_size=3, padding=1),
