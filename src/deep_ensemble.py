@@ -43,11 +43,9 @@ class DeepEnsemble(nn.Module):
             inputs.append(model(x.clone()))
         outputs = torch.stack(inputs)
 
-        mean = torch.mean(
-            outputs, dim=0
-        ).double()  # element wise mean from outout of ensemble models
+        mean = torch.mean(outputs, dim=0).double()  # element wise mean from outout of ensemble models
         pred = torch.sigmoid(outputs)
-        mean_pred = torch.sigmoid(mean).float()  # only extract class prob
+        mean_pred = torch.sigmoid(mean).double()  # only extract class prob
         variance = torch.mean((pred**2 - mean_pred), dim=0).double()
 
         return mean, variance

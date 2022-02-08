@@ -75,7 +75,7 @@ def run_model():
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     config["load_model"] = False
-    config["plot_loss"] = True
+    config["plot_loss"] = False
     config["num_epochs"] = 150
     config["in_channels"] = 3
     config["numcl"] = 1  # no of classes/output channels
@@ -125,7 +125,7 @@ def run_model():
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
     # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=20)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=20, min_lr=1e-6)
 
     early_stopping = None  # EarlyStopping()
 
@@ -192,7 +192,7 @@ def run_model():
                 device=config["device"],
             )
 
-        if config["plot_loss"] == True:
+        if config["plot_loss"]:
             loss_plot_name = "loss_" + config["model_name"] + f"_{model_idx}"
             plt.figure(figsize=(10, 7))
             plt.plot(train_epoch_loss, color="blue", label="train loss")

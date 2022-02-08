@@ -155,20 +155,12 @@ def test_MC_model(loader, forward_passes, model, device, save_folder):
 
     return dice / len(loader), iou / len(loader)
 
+def save_scores(forward_passes):
 
-def plot_dropout_vs_forward_passes(forward_passes, save_plot_path, load_model_path):
 
-    train_loader, val_loader, test_loader = data_loaders(
-        batch_size=32,
-        train_transforms=None,
-        val_transforms=standard_transforms(256, 256),
-        num_workers=4,
-        pin_memory=True,
-    )
-
+def plot_dropout_vs_forward_passes(forward_passes, loader, save_folder, save_plot_path, load_model_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = torch.load(load_model_path)
-    save_folder = "/home/feliciaj/PolypSegmentation/results/mc_dropout/"
     dice_list, iou_list = [], []
     for passes in range(1, forward_passes + 1):
         dice, iou = test_MC_model(test_loader, passes, model, device, save_folder)
@@ -278,4 +270,4 @@ if __name__ == "__main__":
     load_model_path = (
         "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_1.pt"
     )
-    plot_dropout_vs_forward_passes(50, save_plot_path, load_model_path)
+    plot_dropout_vs_forward_passes(50, test_loader, save_folder, save_plot_path, load_model_path)
