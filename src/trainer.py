@@ -119,8 +119,8 @@ def run_model():
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
 
     # criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
-    # criterion = BCEDiceLoss() # Sigmoid layer and Dice loss
-    criterion = DiceLoss()
+    # criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
+    criterion = DiceLoss() # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 

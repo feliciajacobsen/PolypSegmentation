@@ -26,6 +26,7 @@ class MCDropoutSegmentation:
         self.device = device
         self.max_epoch = max_epoch
         self.lr = lr
+        self.loaders = loaders
         self.train_loader, self.val_loader, self.test_loader = loaders
         self.model = UNet_dropout(in_channels=3, out_channels=1, droprate=droprate)
         self.model.to(device)
@@ -40,7 +41,7 @@ class MCDropoutSegmentation:
 
     def train_model(self, verbose=True):
         """
-        Train model and stores validation dice coefficients for 
+        Train model and stores validation dice coefficients for
         each epoch.
 
         Parameters
@@ -49,14 +50,14 @@ class MCDropoutSegmentation:
             data loader object from the data loader module
         val_loader : object
             data loader object from the data loader module
-        
+
         Returns:
         ----------
         val_dice : list
             list of dice coefficients stored and updated at each epoch
         """
 
-        X_test, y_test = iter(val_loader).next()
+        X_test, y_test = iter(self.val_loader).next()
         X_test = X_test.to(self.device)
 
         tqdm_loader = tqdm(self.train_loader)  # make progress bar
@@ -93,7 +94,9 @@ class MCDropoutSegmentation:
 
         return self.val_dice
 
-    def train_n_models(self, save_path, save_plot_path, fig_name, rates=[0, 0.3, 0.5], plot=False):
+    def train_n_models(
+        self, save_path, save_plot_path, fig_name, rates=[0, 0.1 ,0.3, 0.5], plot=False
+    ):
         """
         save_path : str
             path to where to save trained model and their dice scores
@@ -104,8 +107,8 @@ class MCDropoutSegmentation:
         rates : list
             list of floats
         plot : boolean
-            if true, dice vs. epochs are saved.                
-        """  
+            if true, dice vs. epochs are saved.
+        """
 
         self.save_path = save_path
         train_loader = self.train_loader
@@ -113,21 +116,24 @@ class MCDropoutSegmentation:
 
         unets = []
         for rate in rates:
-            unets.append(MCDropoutSegmentation(self.device, rate, self.max_epoch))
-
-        # Training, set verbose=True to see loss after each epoch
-        [unet.train_model(train_loader, val_loader, verbose=True) for unet in unets]
+            unets.append(
+                MCDropoutSegmentation(
+                    device=self.device, loaders=self.loaders, droprate=rate, max_epoch=self.max_epoch
+                )
+            )
 
         # Save trained models
         for idx, (rate, unet) in enumerate(zip(rates, unets)):
-            torch.save(unet.model, save_path + f"unet_{idx}.pt")
-            torch.save(unet.val_dice, save_path + f"unet_val_dices_{idx}.pt")
+            unet.train_model(verbose=True)
+            torch.save(unet.model, save_path + f"unet_rate={rate}.pt")
+            torch.save(unet.val_dice, save_path + f"unet_val_dices_rate={rate}.pt")
 
         if plot:
             plt.figure(figsize=(8, 7))
             for idx, (rate, unet) in enumerate(zip(rates, unets)):
                 dices = torch.load(
-                    save_path + f"unet_val_dices_{idx}.pt", map_location=torch.device("cpu")
+                    save_path + f"unet_val_dices_rate={rate}.pt",
+                    map_location=torch.device("cpu"),
                 )
                 if rate == 0:
                     label = "U-Net no dropout"
@@ -139,8 +145,8 @@ class MCDropoutSegmentation:
             plt.xlabel("Epochs")
             plt.ylabel("Dice coefficient")
             plt.title("Dice coefficient scores on Kvasir-SEG validation dataset")
-            plt.savefig(save_plot_path + f"{fig_name}.png")               
-             
+            plt.savefig(save_plot_path + f"{fig_name}.png")
+
     def enable_dropout(self, model):
         """
         Function to enable the dropout layers during test-time
@@ -163,7 +169,7 @@ class MCDropoutSegmentation:
 
         Returns
         ----------
-            None  
+            None
         """
         device = self.device
         model = torch.load(self.save_path)
@@ -176,7 +182,7 @@ class MCDropoutSegmentation:
             # set non-dropout layers to eval mode
             model.eval()
             # set dropout layers to train mode
-            enable_dropout(model)
+            self.enable_dropout(model)
             for i in range(forward_passes):
                 with torch.no_grad():
                     output = model(x)
@@ -187,7 +193,9 @@ class MCDropoutSegmentation:
             mean = torch.mean(outputs, dim=0).double()
             variance = torch.mean((outputs**2 - mean), dim=0).double().cpu()
 
+            # calculating mean prediction across multiple MCD forward passes
             mean_pred = (mean > 0.5).float()
+            # mean dice and iou across multiple MCD forward passes
             dice += dice_coef(mean_pred, y)
             iou += iou_score(mean_pred, y)
 
@@ -200,19 +208,18 @@ class MCDropoutSegmentation:
                 cols=8,
             )
 
-        # mean scores 
+        # mean scores
         print(f"IoU score: {iou/len(loader)}")
         print(f"Dice score: {dice/len(loader)}")
 
-    
-    def save_scores(self, model_load_path,forward_passes):
+    def save_scores(self, model_load_path, forward_passes):
         model = torch.load(model_load_path)
         device = self.device
         test_loader = self.test_loader
 
         self.dice_list, self.iou_list = [], []
         model.eval()
-        enable_dropout(model)
+        self.enable_dropout(model)
         for passes in range(1, forward_passes + 1):
             dice, iou = 0, 0
             for x, y in test_loader:
@@ -223,19 +230,20 @@ class MCDropoutSegmentation:
                         y = y.unsqueeze(1)
                     output = model(x)
                     prob = torch.sigmoid(output)
-                    pred = (pred > 0.5).float()
+                    pred = (prob > 0.5).float()
 
                     dice += dice_coef(pred, y)
                     iou += iou_score(pred, y)
-            self.dice_list.append(dice/len(test_loader))  
-            self.iou_list.append(iou/len(test_loader))  
+            self.dice_list.append(dice / len(test_loader))
+            self.iou_list.append(iou / len(test_loader))
 
         return self.dice_list, self.iou_list
-        
 
 
 def plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path):
-    assert (len(dice_list) == len(iou_list)), "Error: Dice coeff list does not match IoU score list!"
+    assert len(dice_list) == len(
+        iou_list
+    ), "Error: Dice coeff list does not match IoU score list!"
 
     forward_passes = len(dice_list)
     plt.figure(figsize=(8, 7))
@@ -245,10 +253,9 @@ def plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path):
     plt.xlabel("Number of networks")
     plt.ylabel("Score")
     plt.title(
-        f"Dice and IoU scores with MC droput of droprate=0.1 with {forward_passes} number of U-Nets"
+        f"Dice and IoU scores with MC droput of droprate=0.3 with {forward_passes} number of U-Nets"
     )
-    plt.savefig(save_plot_path + f"unet_dropout_n={forward_passes}_models.png")
-
+    plt.savefig(save_plot_path + f"unet_dropout_{forward_passes}_models.png")
 
 
 if __name__ == "__main__":
@@ -288,12 +295,21 @@ if __name__ == "__main__":
         pin_memory=True,
     )
 
-    # plot_dropout_models(max_epoch, train_loader, val_loader, save_path, save_plot_path, False, rates)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    clf = MCDropoutSegmentation(device, loaders)
-    model_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_1.pt" # path to where model is stored
-    dice_list, iou_list = clf.save_scores(model_path, 20)
+    obj = MCDropoutSegmentation(device, loaders)
 
-    save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures"
-    plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)
+
+    model_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_3.pt"  # path to where model is stored
+    dice_list, iou_list = obj.save_scores(model_path, 20)
+    print(dice_list)
+
+
+
+    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
+    save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
+    rates = [0, 0.1 ,0.3, 0.5]
+    fig_name = f"U-Net with dropout predicted on Kvasir-SEG validation data with rates={rates}"
+    obj.train_n_models(save_path, save_plot_path, fig_name, rates, True)
+
+    #save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
+    #plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)
