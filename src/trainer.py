@@ -137,10 +137,11 @@ def run_model():
         pin_memory=config["pin_memory"],
     )
 
-    val_epoch_loss = []
-    train_epoch_loss = []
-
+    # train several models with same model architecture sequentially
     for model_idx in range(config["num_models"]):
+        # zero out loss for each model
+        val_epoch_loss = []
+        train_epoch_loss = []
         for epoch in range(config["num_epochs"]):
 
             # train on training data
