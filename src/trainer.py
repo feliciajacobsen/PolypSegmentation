@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 # Local imports
 from unet_vajira import UNet_dropout
-from unet import UNet#, UNet_dropout
+from unet import UNet  # , UNet_dropout
 from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
 from utils.dataloader import data_loaders
@@ -71,6 +71,88 @@ def train_model(loader, model, device, optimizer, criterion):
     return sum(losses) / len(loader)
 
 
+def train_validate(
+    no_models,
+    epochs,
+    device,
+    criterion,
+    model,
+    scheduler,
+    loaders,
+    save_folder,
+    model_name,
+    early_stopping,
+    plot_loss,
+):
+    train_loader, val_lodaer, _ = loaders
+    # train several models with same model architecture sequentially
+    for model_idx in range(no_models):
+        # zero out loss for each model
+        val_epoch_loss = []
+        train_epoch_loss = []
+        for epoch in range(epochs):
+
+            # train on training data
+            mean_train_loss = train_model(
+                train_loader, model, device, optimizer, criterion
+            )
+            train_epoch_loss.append(mean_train_loss)
+
+            # check validation loss, and print validation metrics
+            print("------------")
+            print("At epoch %d :" % epoch)
+            mean_val_loss, dice, iou = check_scores(
+                val_loader, model, device, criterion
+            )
+            val_epoch_loss.append(mean_val_loss)
+
+            # take scheduler step
+            if scheduler is not None:
+                scheduler.step(mean_val_loss)
+
+            # save model after training
+            if epoch == epochs - 1:
+                checkpoint = {
+                    "epoch": epoch,
+                    "state_dict": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "criterion": criterion.state_dict(),
+                    "loss": mean_val_loss,
+                }
+                # change name of file and run in order to save more models
+                save_checkpoint(
+                    epoch,
+                    checkpoint,
+                    save_folder + model_name + f"_checkpoint_{model_idx}.pt",
+                )
+
+            if early_stopping is not None:
+                early_stopping(mean_val_loss)
+                if early_stopping.early_stop:
+                    break
+
+            # save examples to a folder
+            save_preds_as_imgs(
+                test_loader,
+                model,
+                folder="/home/feliciaj/data/Kvasir-SEG/" + "/" + model_name,
+                device=device,
+            )
+
+        if plot_loss:
+            loss_plot_name = "loss_" + model_name + f"_{model_idx}"
+            plt.figure(figsize=(10, 7))
+            plt.plot(train_epoch_loss, color="blue", label="train loss")
+            plt.plot(val_epoch_loss, color="green", label="validataion loss")
+            plt.xlabel("Epochs")
+            plt.ylabel("Loss")
+            plt.title(model_name)
+            plt.legend()
+            plt.savefig(
+                f"/home/feliciaj/PolypSegmentation/results/loss_plots/{loss_plot_name}.png"
+            )
+
+
 def run_model():
     config = dict()
     config["lr"] = 1e-4
@@ -121,16 +203,18 @@ def run_model():
 
     # criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
     # criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
-    criterion = DiceLoss() # Sigmoid layer and Dice loss
+    criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
     # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.1, patience=20, min_lr=1e-6)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, factor=0.1, patience=20, min_lr=1e-6
+    )
 
     early_stopping = None  # EarlyStopping()
 
-    train_loader, val_loader, test_loader = data_loaders(
+    loaders = data_loaders(
         batch_size=config["batch_size"],
         train_transforms=train_transforms,
         val_transforms=val_transforms,
@@ -138,74 +222,20 @@ def run_model():
         pin_memory=config["pin_memory"],
     )
 
-    # train several models with same model architecture sequentially
-    for model_idx in range(config["num_models"]):
-        # zero out loss for each model
-        val_epoch_loss = []
-        train_epoch_loss = []
-        for epoch in range(config["num_epochs"]):
 
-            # train on training data
-            mean_train_loss = train_model(
-                train_loader, model, config["device"], optimizer, criterion
-            )
-            train_epoch_loss.append(mean_train_loss)
-
-            # check validation loss, and print validation metrics
-            print("------------")
-            print("At epoch %d :" % epoch)
-            mean_val_loss, dice, iou = check_scores(
-                val_loader, model, config["device"], criterion
-            )
-            val_epoch_loss.append(mean_val_loss)
-
-            # take scheduler step
-            if scheduler is not None:
-                scheduler.step(mean_val_loss)
-
-            # save model after training
-            if epoch == config["num_epochs"] - 1:
-                checkpoint = {
-                    "epoch": epoch,
-                    "state_dict": model.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "criterion": criterion.state_dict(),
-                    "loss": mean_val_loss,
-                }
-                # change name of file and run in order to save more models
-                save_checkpoint(
-                    epoch,
-                    checkpoint,
-                    config["save_folder"]
-                    + config["model_name"]
-                    + f"_checkpoint_{model_idx}.pt",
-                )
-
-            if early_stopping is not None:
-                early_stopping(mean_val_loss)
-                if early_stopping.early_stop:
-                    break
-
-            # save examples to a folder
-            save_preds_as_imgs(
-                test_loader,
-                model,
-                folder="/home/feliciaj/data/Kvasir-SEG/" + "/" + config["model_name"],
-                device=config["device"],
-            )
-
-        if config["plot_loss"]:
-            loss_plot_name = "loss_" + config["model_name"] + f"_{model_idx}"
-            plt.figure(figsize=(10, 7))
-            plt.plot(train_epoch_loss, color="blue", label="train loss")
-            plt.plot(val_epoch_loss, color="green", label="validataion loss")
-            plt.xlabel("Epochs")
-            plt.ylabel("Loss")
-            plt.title(config["model_name"] + "")
-            plt.legend()
-            plt.savefig(
-                f"/home/feliciaj/PolypSegmentation/results/loss_plots/{loss_plot_name}.png"
-            )
+    train_validate(
+    no_models=config["num_models"],
+    epochs=config["num_epochs"],
+    device=config["device"],
+    criterion=criterion,
+    model=model,
+    scheduler=scheduler,
+    loaders=loaders,
+    save_folder=config["save_folder"],
+    model_name=config["unet"],
+    early_stopping=early_stopping,
+    plot_loss=config["plot_loss"],
+    )
 
 
 if __name__ == "__main__":

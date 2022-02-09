@@ -82,7 +82,7 @@ class ResUnetPlusPlus(nn.Module):
         return out
 
 
-def test_resunet++():
+def test_resunetplusplus():
     x = torch.randn((2, 3, 256, 256))
     model = ResUnetPlusPlus(in_channels=3, out_channels=1)
     preds = model(x)
@@ -91,4 +91,4 @@ def test_resunet++():
 
 
 if __name__ == "__main__":
-    test_resunet++()
+    test_resunetplusplus()

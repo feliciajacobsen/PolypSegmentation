@@ -308,7 +308,7 @@ if __name__ == "__main__":
     #obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/unet")
     
     model_path = "/home/feliciaj/PolypSegmentation/saved_models/vajira/unet.pt"  # path to where model is stored
-    dice_list, iou_list = obj.save_scores(model_path, 30)
+    dice_list, iou_list = obj.save_scores(model_path, 15)
 
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
     plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)
