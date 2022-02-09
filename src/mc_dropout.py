@@ -46,10 +46,8 @@ class MCDropoutSegmentation:
 
         Parameters
         ----------
-        train_loader : object
-            data loader object from the data loader module
-        val_loader : object
-            data loader object from the data loader module
+        save_model_path : str
+            path and filename to where to store model
 
         Returns:
         ----------
@@ -88,7 +86,7 @@ class MCDropoutSegmentation:
             if self.scheduler is not None:
                 self.scheduler.step(mean_val_loss)
 
-            if epoch == config["num_epochs"] - 1:
+            if epoch == self.max_epoch - 1:
                 torch.save(self.model, save_model_path + ".pt")
 
             if verbose:
@@ -127,8 +125,8 @@ class MCDropoutSegmentation:
 
         # Save trained models
         for idx, (rate, unet) in enumerate(zip(rates, unets)):
-            unet.train_model(verbose=True)
-            torch.save(unet.model, save_path + f"unet_rate={rate}.pt")
+            unet.train_model(save_path + f"unet_rate={rate}.pt", verbose=True)
+            #torch.save(unet.model, save_path + f"unet_rate={rate}.pt")
             torch.save(unet.val_dice, save_path + f"unet_val_dices_rate={rate}.pt")
 
         if plot:
@@ -253,10 +251,10 @@ def plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path):
     plt.plot(range(1, forward_passes + 1), dice_list, ".-", label="Dice coeff")
     plt.plot(range(1, forward_passes + 1), iou_list, ".-", label="IoU")
     plt.legend(loc="best")
-    plt.xlabel("Number of networks")
+    plt.xlabel("Number of forward passes")
     plt.ylabel("Score")
     plt.title(
-        f"Dice and IoU scores with MC droput of droprate=0.3 with {forward_passes} number of U-Nets"
+        f"Dice and IoU scores with MC droput with {forward_passes} number of U-Nets"
     )
     plt.savefig(save_plot_path + f"unet_dropout_{forward_passes}_models.png")
 
@@ -299,7 +297,7 @@ if __name__ == "__main__":
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    obj = MCDropoutSegmentation(device, loaders, droprate=0.3, max_epoch=150, lr=0.01)
+    obj = MCDropoutSegmentation(device, loaders, droprate=0.3, max_epoch=10, lr=0.01)
 
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
@@ -307,12 +305,11 @@ if __name__ == "__main__":
     fig_name = f"U-Net with dropout predicted on Kvasir-SEG validation data with rates={rates}"
     #obj.train_n_models(save_path, save_plot_path, fig_name, rates, True) # train model
 
-    obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/")
-
-    """
-    model_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_rate=0.5.pt"  # path to where model is stored
-    dice_list, iou_list = obj.save_scores(model_path, 20)
+    #obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/unet")
+    
+    model_path = "/home/feliciaj/PolypSegmentation/saved_models/vajira/unet.pt"  # path to where model is stored
+    dice_list, iou_list = obj.save_scores(model_path, 30)
 
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
     plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)
-    """
+    
