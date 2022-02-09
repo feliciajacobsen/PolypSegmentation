@@ -13,8 +13,8 @@ from tqdm import tqdm
 # import models
 from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
-from unet import UNet_dropout, UNet
-
+#from unet import UNet_dropout, UNet
+from unet_vajira import UNet_dropout
 # import from utils subfolder
 from utils.dataloader import data_loaders
 from utils.utils import check_scores, save_grid, standard_transforms
@@ -28,7 +28,7 @@ class MCDropoutSegmentation:
         self.lr = lr
         self.loaders = loaders
         self.train_loader, self.val_loader, self.test_loader = loaders
-        self.model = UNet_dropout(in_channels=3, out_channels=1, droprate=droprate)
+        self.model = UNet_dropout(in_channels=3, out_channels=1)#UNet_dropout(in_channels=3, out_channels=1, droprate=droprate)
         self.model.to(device)
         self.criterion = DiceLoss().to(device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
@@ -39,7 +39,7 @@ class MCDropoutSegmentation:
         self.val_dice = []
         self.val_iou = []
 
-    def train_model(self, verbose=True):
+    def train_model(self, save_model_path, verbose=True):
         """
         Train model and stores validation dice coefficients for
         each epoch.
@@ -87,6 +87,9 @@ class MCDropoutSegmentation:
 
             if self.scheduler is not None:
                 self.scheduler.step(mean_val_loss)
+
+            if epoch == config["num_epochs"] - 1:
+                torch.save(self.model, save_model_path + ".pt")
 
             if verbose:
                 print("Epoch {} ==> loss: {}".format(epoch + 1, self.loss_[-1]))
@@ -259,7 +262,7 @@ def plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path):
 
 
 if __name__ == "__main__":
-    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
+    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout_vajira/"
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
     max_epoch = 150
     rates = [0, 0.1, 0.2]
@@ -296,14 +299,7 @@ if __name__ == "__main__":
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    obj = MCDropoutSegmentation(device, loaders)
-
-
-    model_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_rate=0.5.pt"  # path to where model is stored
-    dice_list, iou_list = obj.save_scores(model_path, 20)
-    print(dice_list)
-
-
+    obj = MCDropoutSegmentation(device, loaders, droprate=0.3, max_epoch=150, lr=0.01)
 
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
@@ -311,5 +307,12 @@ if __name__ == "__main__":
     fig_name = f"U-Net with dropout predicted on Kvasir-SEG validation data with rates={rates}"
     #obj.train_n_models(save_path, save_plot_path, fig_name, rates, True) # train model
 
+    obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/")
+
+    """
+    model_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_rate=0.5.pt"  # path to where model is stored
+    dice_list, iou_list = obj.save_scores(model_path, 20)
+
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
     plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)
+    """

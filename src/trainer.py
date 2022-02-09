@@ -7,7 +7,8 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 
 # Local imports
-from unet import UNet, UNet_dropout
+from unet_vajira import UNet_dropout
+from unet import UNet#, UNet_dropout
 from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
 from utils.dataloader import data_loaders
@@ -84,7 +85,7 @@ def run_model():
     config["num_workers"] = 4
     config["image_height"] = 256
     config["image_width"] = 256
-    config["num_models"] = 5  # no. of models to train at once
+    config["num_models"] = 1  # no. of models to train at once
     config["model_name"] = "resunet++"
     config["save_folder"] = (
         "/home/feliciaj/PolypSegmentation/saved_models/" + config["model_name"] + "/"

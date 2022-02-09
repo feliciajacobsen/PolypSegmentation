@@ -71,7 +71,7 @@ class OutConv(nn.Module):
 
 
 class UNet_dropout(nn.Module):
-    def __init__(self, in_channels, out_channels, droprate):
+    def __init__(self, in_channels, out_channels):
         super(UNet_dropout, self).__init__()
         """
         Credit : https://github.com/milesial/Pytorch-UNet/blob/master/unet/unet_model.py
@@ -90,8 +90,6 @@ class UNet_dropout(nn.Module):
         self.down1 = Down(64, 128)
         self.down2 = Down(128, 256)
         self.down3 = Down(256, 512)
-
-        self.dropout = nn.Dropout(p=droprate)
 
         # Bottleneck
         self.bottleneck = Down(512, 512)
