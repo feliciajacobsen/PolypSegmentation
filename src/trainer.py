@@ -112,19 +112,20 @@ def train_validate(
 
             # save model after training
             if epoch == epochs - 1:
-                checkpoint = {
-                    "epoch": epoch,
-                    "state_dict": model.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "criterion": criterion.state_dict(),
-                    "loss": mean_val_loss,
-                }
-                # change name of file and run in order to save more models
-                save_checkpoint(
-                    epoch,
-                    checkpoint,
-                    save_folder + model_name + f"_checkpoint_{model_idx}.pt",
-                )
+                if save_folder != None:
+                    checkpoint = {
+                        "epoch": epoch,
+                        "state_dict": model.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "criterion": criterion.state_dict(),
+                        "loss": mean_val_loss,
+                    }
+                    # change name of file and run in order to save more models
+                    save_checkpoint(
+                        epoch,
+                        checkpoint,
+                        save_folder + model_name + f"_checkpoint_{model_idx}.pt",
+                    )
 
             if early_stopping is not None:
                 early_stopping(mean_val_loss)
@@ -232,7 +233,7 @@ def run_model():
     scheduler=scheduler,
     loaders=loaders,
     save_folder=config["save_folder"],
-    model_name=config["unet"],
+    model_name=config["model_name"],
     early_stopping=early_stopping,
     plot_loss=config["plot_loss"],
     )
