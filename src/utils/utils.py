@@ -148,12 +148,15 @@ def save_grid(ims, folder, rows=None, cols=None):
     fig.subplots_adjust(wspace=0, hspace=0)
 
     for ax,im in zip(axarr.ravel(), ims):
-        ax.imshow(im, cmap="jet")
+        img = ax.imshow(im, cmap="jet")
         ax.set_axis_off()
-        ax.set_aspect("equal")
+        ax.set_aspect("equal") 
+        fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+        plt.colorbar(img, cax=cbar_ax, ticks=[0, 1e-15])
+  
 
-    kwargs = {'pad_inches': 0.00} 
-    fig.savefig(folder, transparent=True)
+    fig.savefig(folder, transparent=False)
 
 
 def standard_transforms(height, width):

@@ -299,7 +299,7 @@ if __name__ == "__main__":
     obj = MCDropoutSegmentation(device, loaders)
 
 
-    model_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_3.pt"  # path to where model is stored
+    model_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_rate=0.5.pt"  # path to where model is stored
     dice_list, iou_list = obj.save_scores(model_path, 20)
     print(dice_list)
 
@@ -309,7 +309,7 @@ if __name__ == "__main__":
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
     rates = [0, 0.1 ,0.3, 0.5]
     fig_name = f"U-Net with dropout predicted on Kvasir-SEG validation data with rates={rates}"
-    obj.train_n_models(save_path, save_plot_path, fig_name, rates, True)
+    #obj.train_n_models(save_path, save_plot_path, fig_name, rates, True) # train model
 
-    #save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
-    #plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)
+    save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
+    plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)

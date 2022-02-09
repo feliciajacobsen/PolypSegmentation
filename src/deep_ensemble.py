@@ -8,6 +8,7 @@ from albumentations.pytorch import ToTensorV2
 # local imports
 from unet import UNet
 from doubleunet import DoubleUNet
+from resunetplusplus import ResUnetPlusPlus
 from utils.dataloader import data_loaders
 from utils.utils import save_grid, standard_transforms
 from utils.metrics import DiceLoss, dice_coef, iou_score
@@ -41,12 +42,16 @@ class DeepEnsemble(nn.Module):
         inputs = []
         for model in self.model_list:
             inputs.append(model(x.clone()))
-        outputs = torch.stack(inputs)
+        outputs = torch.stack(inputs) # shape – (ensemble_size, b, c, w, h)
 
         mean = torch.mean(outputs, dim=0).double()  # element wise mean from outout of ensemble models
         pred = torch.sigmoid(outputs)
         mean_pred = torch.sigmoid(mean).double()  # only extract class prob
-        variance = torch.mean((pred**2 - mean_pred), dim=0).double()
+        #variance = torch.mean((pred**2 - mean_pred), dim=0).double()
+        #variance = torch.mean(pred**2, dim=0) - mean_pred**2
+        variance = torch.mean((pred - mean_pred)**2 , dim=0).double()
+        print(torch.max(variance), torch.min(variance))
+        normalized_variance = (variance - torch.mean(variance,dim=0)) / (torch.std(variance, dim=0).double())
 
         return mean, variance
 
@@ -57,8 +62,8 @@ def test_ensembles():
     Only supports for ensemble_size=3.
 
     """
-    save_folder = "/home/feliciaj/PolypSegmentation/ensembles/"
-    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/unet/"
+    save_folder = "/home/feliciaj/PolypSegmentation/results/ensembles_resunet++/"
+    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/resunet++/"
 
     train_loader, val_loader, test_loader = data_loaders(
         batch_size=32,
@@ -70,8 +75,8 @@ def test_ensembles():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     criterion = DiceLoss()
-    model = UNet(in_channels=3, out_channels=1)
-    ensemble_size = 3
+    model = ResUnetPlusPlus(in_channels=3, out_channels=1)
+    ensemble_size = 5
 
     paths = os.listdir(load_folder)[:ensemble_size]  # list of saved models in folder
     assert (
