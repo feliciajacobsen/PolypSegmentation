@@ -47,9 +47,10 @@ class DeepEnsemble(nn.Module):
         mean = torch.mean(outputs, dim=0).double()  # element wise mean from outout of ensemble models
         pred = torch.sigmoid(outputs)
         mean_pred = torch.sigmoid(mean).double()  # only extract class prob
-        #variance = torch.mean((pred**2 - mean_pred), dim=0).double()
+        #variance = torch.mean((pred**2 - mean_pred), dim=0).double() # give nice outputs
         #variance = torch.mean(pred**2, dim=0) - mean_pred**2
         variance = torch.mean((pred - mean_pred)**2 , dim=0).double()
+
         print(torch.max(variance), torch.min(variance))
         normalized_variance = (variance - torch.mean(variance,dim=0)) / (torch.std(variance, dim=0).double())
 

@@ -141,21 +141,20 @@ def save_grid(ims, folder, rows=None, cols=None):
         cols = 1
    
     if ims.shape[0] < rows*cols:
-        fig,axarr = plt.subplots(1, rows)
+        fig,axarr = plt.subplots(1, rows, figsize=(10,8))
     else:
-        fig,axarr = plt.subplots(rows, cols)
+        fig,axarr = plt.subplots(rows, cols, figsize=(10,8))
 
-    fig.subplots_adjust(wspace=0, hspace=0)
+    #fig.subplots_adjust(wspace=0, hspace=0)
 
     for ax,im in zip(axarr.ravel(), ims):
-        img = ax.imshow(im, cmap="jet")
+        img = ax.imshow(im, cmap="turbo", vmin=im.min(), vmax=im.max())
         ax.set_axis_off()
         ax.set_aspect("equal") 
         fig.subplots_adjust(right=0.8)
         cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-        plt.colorbar(img, cax=cbar_ax, ticks=[0, 1e-15])
-  
-
+        plt.colorbar(img, cax=cbar_ax, ticks=[0, im.max()/2., im.max()], format="%.1e")
+    
     fig.savefig(folder, transparent=False)
 
 
