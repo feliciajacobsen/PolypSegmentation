@@ -35,14 +35,15 @@ class Down(nn.Module):
         return self.maxpool_conv(x)
 
 class Up(nn.Module):
-"""Upscaling then double conv"""
+    """Upscaling then double conv"""
     def __init__(self, in_channels, out_channels, bilinear=True):
         super().__init__()
         # if bilinear, use the normal convolutions to reduce the number of channels
         if bilinear:
-        self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
+            self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         else:
-        self.up = nn.ConvTranspose2d(in_channels // 2, in_channels // 2, kernel_size=2, stride=2)
+            self.up = nn.ConvTranspose2d(in_channels // 2, in_channels // 2, kernel_size=2, stride=2)
+
         self.conv = DoubleConv(in_channels, out_channels)
 
     def forward(self, x1, x2):
@@ -93,7 +94,7 @@ class UNet_dropout(nn.Module):
         self.dropout = nn.Dropout(p=droprate)
 
         # Bottleneck
-        self.bottleneck = Downsample(512, 512)
+        self.bottleneck = Down(512, 512)
 
         # Upsample Image
         self.up1 = Up(
@@ -123,7 +124,7 @@ class UNet_dropout(nn.Module):
 def test():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     x = torch.randn((3, 1, 160, 160)).to(device)
-    model = UNet(in_channels=1, out_channels=1).to(device)
+    model = UNet_dropout(in_channels=1, out_channels=1).to(device)
     preds = model(x)
     print(preds.shape)
     print(x.shape)
