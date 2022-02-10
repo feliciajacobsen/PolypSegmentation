@@ -124,6 +124,7 @@ class ValidateTrainTestEnsemble():
         # for 2nd iteration ---> pred = mean(model1(x) + model2(x))
         # and so on
 
+
 if __name__ == "__main__":
     loaders = data_loaders(
             batch_size=32,

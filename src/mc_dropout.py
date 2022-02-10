@@ -212,7 +212,7 @@ class MCDropoutSegmentation:
         # mean scores
         print(f"IoU score: {iou/len(loader)}")
         print(f"Dice score: {dice/len(loader)}")
-
+        
     def save_scores(self, model_load_path, forward_passes):
         model = torch.load(model_load_path)
         device = self.device
@@ -228,7 +228,7 @@ class MCDropoutSegmentation:
                     x = x.to(device)
                     y = y.to(device)
                     if y.shape[1] != 1:
-                        y = y.unsqueeze(1)
+                        y = y.unsqueeze(1)    
                     output = model(x)
                     prob = torch.sigmoid(output)
                     pred = (prob > 0.5).float()
