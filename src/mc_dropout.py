@@ -61,6 +61,7 @@ class MCDropoutSegmentation:
         tqdm_loader = tqdm(self.train_loader)  # make progress bar
         scaler = torch.cuda.amp.GradScaler()
 
+        model.train()
         for epoch in range(self.max_epoch):
             for i, data in enumerate(tqdm_loader):
                 targets, labels = data
@@ -156,7 +157,7 @@ class MCDropoutSegmentation:
             if m.__class__.__name__.startswith("Dropout"):
                 m.train()
 
-    def save_prediction_imgs(self, forward_passes, save_img_folder):
+    def predict(self, forward_passes, load_path):
         """
         Function to get the monte-carlo samples and uncertainty estimates
         through multiple forward passes
@@ -165,46 +166,61 @@ class MCDropoutSegmentation:
         ----------
         forward passes : int
             number of monte-carlo models
-        save_img_folder : str
-            path to store prediction images
+        load_folder : str
+            path to where trained images are stores
 
         Returns
         ----------
-            None
+        mean: tensor
+            Mean image of forward passes
+        variance : tensor
+            Variance of the forward passs.
         """
         device = self.device
-        model = torch.load(self.save_path)
+        model = torch.load(load_path)
 
         dice, iou = 0, 0
-        for batch, (x, y) in enumerate(self.test_loader):
+        for x, _ in self.test_loader:
             preds = []
             x = x.to(device)
-            y = y.to(device).unsqueeze(1)
+            #y = y.to(device).unsqueeze(1)
+
             # set non-dropout layers to eval mode
             model.eval()
+
             # set dropout layers to train mode
             self.enable_dropout(model)
-            for i in range(forward_passes):
+
+            for passes in range(forward_passes):
                 with torch.no_grad():
                     output = model(x)
                     prob = torch.sigmoid(output)
                     preds.append(prob)
-            outputs = torch.stack(preds)
+            outputs = torch.stack(preds) # shape – (forward_passes, b, c, h, w)
+
             # double precision for mean and variance tensors
             mean = torch.mean(outputs, dim=0).double()
             variance = torch.mean((outputs**2 - mean), dim=0).double().cpu()
 
             # calculating mean prediction across multiple MCD forward passes
             mean_pred = (mean > 0.5).float()
-            # mean dice and iou across multiple MCD forward passes
-            dice += dice_coef(mean_pred, y)
-            iou += iou_score(mean_pred, y)
 
-            torchvision.utils.save_image(mean_pred, f"{save_folder}/pred_{batch}.png")
-            torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
+        model.train()
+
+        return mean_pred, variance
+
+    def save_images(self, mean, variance, img_folder):   
+
+        for batch, (x,y) in enumerate(self.test_loader):
+            # mean dice and iou across multiple MCD forward passes
+            dice += dice_coef(mean, y)
+            iou += iou_score(mean, y)
+
+            torchvision.utils.save_image(mean, f"{img_folder}/pred_{batch}.png")
+            torchvision.utils.save_image(y, f"{img_folder}/mask_{batch}.png")
             save_grid(
                 variance.permute(0, 2, 3, 1),
-                f"{save_folder}/heatmap_{batch}.png",
+                f"{img_folder}/heatmap_{batch}.png",
                 rows=4,
                 cols=8,
             )
@@ -212,29 +228,25 @@ class MCDropoutSegmentation:
         # mean scores
         print(f"IoU score: {iou/len(loader)}")
         print(f"Dice score: {dice/len(loader)}")
-        
+
     def save_scores(self, model_load_path, forward_passes):
         model = torch.load(model_load_path)
         device = self.device
         test_loader = self.test_loader
 
         self.dice_list, self.iou_list = [], []
-        model.eval()
-        self.enable_dropout(model)
         for passes in range(1, forward_passes + 1):
             dice, iou = 0, 0
-            for x, y in test_loader:
-                with torch.no_grad():
-                    x = x.to(device)
-                    y = y.to(device)
-                    if y.shape[1] != 1:
-                        y = y.unsqueeze(1)    
-                    output = model(x)
-                    prob = torch.sigmoid(output)
-                    pred = (prob > 0.5).float()
+            mean, variance = self.predict(passes)
 
-                    dice += dice_coef(pred, y)
-                    iou += iou_score(pred, y)
+            for x, y in test_loader:
+                x = x.to(device)
+                y = y.to(device)
+                if y.shape[1] != 1:
+                    y = y.unsqueeze(1)    
+                dice += dice_coef(mean, y)
+                iou += iou_score(mean, y)
+
             self.dice_list.append(dice / len(test_loader))
             self.iou_list.append(iou / len(test_loader))
 
@@ -299,6 +311,10 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     obj = MCDropoutSegmentation(device, loaders, droprate=0.3, max_epoch=10, lr=0.01)
 
+    mean, var = obj.predict(forward_passes=5, load_path="/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_rate=0.1.pt")
+    img_folder = "/home/feliciaj/PolypSegmentation/results/mc_dropout_unet"
+    obj.save_images(mean, variance, img_folder)
+
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
     rates = [0, 0.1 ,0.3, 0.5]
@@ -307,9 +323,9 @@ if __name__ == "__main__":
 
     #obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/unet")
     
-    model_path = "/home/feliciaj/PolypSegmentation/saved_models/vajira/unet.pt"  # path to where model is stored
-    dice_list, iou_list = obj.save_scores(model_path, 15)
+    #model_path = "/home/feliciaj/PolypSegmentation/saved_models/vajira/unet.pt"  # path to where model is stored
+    #dice_list, iou_list = obj.save_scores(model_path, 15)
 
-    save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
-    plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)
+    #save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
+    #plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)
     
