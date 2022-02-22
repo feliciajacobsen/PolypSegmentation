@@ -124,7 +124,7 @@ def train_validate(
                     save_checkpoint(
                         epoch,
                         checkpoint,
-                        save_folder + model_name + f"_checkpoint_{model_idx}.pt",
+                        save_folder + model_name + f"_{model_idx}.pt",
                     )
 
             if early_stopping is not None:
@@ -168,10 +168,10 @@ def run_model():
     config["num_workers"] = 4
     config["image_height"] = 256
     config["image_width"] = 256
-    config["num_models"] = 1  # no. of models to train at once
+    config["num_models"] = 15  # no. of models to train at once
     config["model_name"] = "resunet++"
     config["save_folder"] = (
-        "/home/feliciaj/PolypSegmentation/saved_models/" + config["model_name"] + "/"
+        "/home/feliciaj/PolypSegmentation/saved_models/" + config["model_name"] + "_BCE/"
     )
 
     if config["model_name"] == "unet":
@@ -202,9 +202,9 @@ def run_model():
 
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
 
-    # criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
-    # criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
-    criterion = DiceLoss()  # Sigmoid layer and Dice loss
+    criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
+    #criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
+    #criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 

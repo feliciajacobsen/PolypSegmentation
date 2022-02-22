@@ -22,9 +22,8 @@ from utils.metrics import dice_coef, iou_score, DiceLoss
 
 
 class MCDropoutSegmentation:
-    def __init__(self, device, loaders, droprate=0.3, max_epoch=150, lr=0.01):
+    def __init__(self, device, loaders, droprate=0.3, lr=0.01):
         self.device = device
-        self.max_epoch = max_epoch
         self.lr = lr
         self.loaders = loaders
         self.train_loader, self.val_loader, self.test_loader = loaders
@@ -39,7 +38,7 @@ class MCDropoutSegmentation:
         self.val_dice = []
         self.val_iou = []
 
-    def train_model(self, save_model_path, verbose=True):
+    def train_model(self, save_model_path, max_epoch=150, verbose=True):
         """
         Train model and stores validation dice coefficients for
         each epoch.
@@ -62,7 +61,7 @@ class MCDropoutSegmentation:
         scaler = torch.cuda.amp.GradScaler()
 
         model.train()
-        for epoch in range(self.max_epoch):
+        for epoch in range(max_epoch):
             for i, data in enumerate(tqdm_loader):
                 targets, labels = data
                 targets, labels = Variable(targets).cuda(), Variable(labels).cuda()
@@ -87,7 +86,7 @@ class MCDropoutSegmentation:
             if self.scheduler is not None:
                 self.scheduler.step(mean_val_loss)
 
-            if epoch == self.max_epoch - 1:
+            if epoch == max_epoch - 1:
                 torch.save(self.model, save_model_path + ".pt")
 
             if verbose:
@@ -120,7 +119,9 @@ class MCDropoutSegmentation:
         for rate in rates:
             unets.append(
                 MCDropoutSegmentation(
-                    device=self.device, loaders=self.loaders, droprate=rate, max_epoch=self.max_epoch
+                    device=self.device, 
+                    loaders=self.loaders, 
+                    droprate=rate
                 )
             )
 
@@ -157,7 +158,7 @@ class MCDropoutSegmentation:
             if m.__class__.__name__.startswith("Dropout"):
                 m.train()
 
-    def predict(self, forward_passes, load_path):
+    def predict(self, forward_passes, load_path, save_imgs=False, img_folder=None):
         """
         Function to get the monte-carlo samples and uncertainty estimates
         through multiple forward passes
@@ -179,11 +180,10 @@ class MCDropoutSegmentation:
         device = self.device
         model = torch.load(load_path)
 
-        dice, iou = 0, 0
-        for x, _ in self.test_loader:
+        for batch, (x, y) in enumerate(self.test_loader):
             preds = []
             x = x.to(device)
-            #y = y.to(device).unsqueeze(1)
+            y = y.to(device).unsqueeze(1)
 
             # set non-dropout layers to eval mode
             model.eval()
@@ -200,34 +200,32 @@ class MCDropoutSegmentation:
 
             # double precision for mean and variance tensors
             mean = torch.mean(outputs, dim=0).double()
-            variance = torch.mean((outputs**2 - mean), dim=0).double().cpu()
+            #variance = torch.mean((outputs - mean)**2, dim=0).double().cpu()
+            variance = torch.var(outputs, dim=0).double().cpu()
 
             # calculating mean prediction across multiple MCD forward passes
             mean_pred = (mean > 0.5).float()
+
+            if save_imgs==True:
+                self.save_images(batch, mean_pred, variance, y, img_folder)
 
         model.train()
 
         return mean_pred, variance
 
-    def save_images(self, mean, variance, img_folder):   
-
-        for batch, (x,y) in enumerate(self.test_loader):
-            # mean dice and iou across multiple MCD forward passes
-            dice += dice_coef(mean, y)
-            iou += iou_score(mean, y)
-
-            torchvision.utils.save_image(mean, f"{img_folder}/pred_{batch}.png")
-            torchvision.utils.save_image(y, f"{img_folder}/mask_{batch}.png")
-            save_grid(
-                variance.permute(0, 2, 3, 1),
-                f"{img_folder}/heatmap_{batch}.png",
-                rows=4,
-                cols=8,
-            )
-
-        # mean scores
-        print(f"IoU score: {iou/len(loader)}")
-        print(f"Dice score: {dice/len(loader)}")
+    def save_images(self, batch, mean, variance, truth, img_folder):
+        """
+        Function saves images from the same batch in a grid. 
+        """   
+        torchvision.utils.save_image(mean, f"{img_folder}/pred_{batch}.png")
+        torchvision.utils.save_image(truth, f"{img_folder}/mask_{batch}.png")
+        save_grid(
+            variance.permute(0, 2, 3, 1),
+            f"{img_folder}/heatmap_{batch}.png",
+            rows=4,
+            cols=8,
+        )
+        
 
     def save_scores(self, model_load_path, forward_passes):
         model = torch.load(model_load_path)
@@ -311,9 +309,11 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     obj = MCDropoutSegmentation(device, loaders, droprate=0.3, max_epoch=10, lr=0.01)
 
-    mean, var = obj.predict(forward_passes=5, load_path="/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_rate=0.1.pt")
+    passes = 5
     img_folder = "/home/feliciaj/PolypSegmentation/results/mc_dropout_unet"
-    obj.save_images(mean, variance, img_folder)
+    load_path= "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_rate=0.1.pt"
+    mean, var = obj.predict(passes,load_path,True,img_folder)
+    
 
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
