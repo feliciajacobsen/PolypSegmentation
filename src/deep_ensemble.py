@@ -34,11 +34,11 @@ class DeepEnsemble(nn.Module):
 
         self.model_list = []
         for i in range(ensemble_size):
-            self.model_list.append(model)
-        print(self.model_list)
+            self.model_list.append(model.to(device))
+        """
         for model in self.model_list:
             model.to(device)
-
+        """
     def forward(self, x):
         inputs = []
         for model in self.model_list:
@@ -48,8 +48,6 @@ class DeepEnsemble(nn.Module):
         mean = torch.mean(outputs, dim=0).double()  # element wise mean from output of ensemble models
         pred = torch.sigmoid(outputs)
         mean_pred = torch.sigmoid(mean).double()  # only extract class prob
-        #variance = torch.mean((pred**2 - mean_pred), dim=0).double() # give nice outputs
-        #variance = torch.mean(pred**2, dim=0) - mean_pred**2
         variance = torch.mean((pred - mean_pred)**2 , dim=0).double()
     
         normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))

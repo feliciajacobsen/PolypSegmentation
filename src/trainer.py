@@ -77,6 +77,7 @@ def train_validate(
     device,
     criterion,
     model,
+    optimizer,
     scheduler,
     loaders,
     save_folder,
@@ -84,7 +85,7 @@ def train_validate(
     early_stopping,
     plot_loss,
 ):
-    train_loader, val_lodaer, _ = loaders
+    train_loader, val_loader, _ = loaders
     # train several models with same model architecture sequentially
     for model_idx in range(no_models):
         # zero out loss for each model
@@ -134,7 +135,7 @@ def train_validate(
 
             # save examples to a folder
             save_preds_as_imgs(
-                test_loader,
+                val_loader,
                 model,
                 folder="/home/feliciaj/data/Kvasir-SEG/" + "/" + model_name,
                 device=device,
@@ -230,6 +231,7 @@ def run_model():
     device=config["device"],
     criterion=criterion,
     model=model,
+    optimizer=optimizer,
     scheduler=scheduler,
     loaders=loaders,
     save_folder=config["save_folder"],
