@@ -5,6 +5,7 @@ import os
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import matplotlib.pyplot as plt
+import numpy as np
 
 # local imports
 from unet import UNet
@@ -35,10 +36,7 @@ class DeepEnsemble(nn.Module):
         self.model_list = []
         for i in range(ensemble_size):
             self.model_list.append(model.to(device))
-        """
-        for model in self.model_list:
-            model.to(device)
-        """
+       
     def forward(self, x):
         inputs = []
         for model in self.model_list:
@@ -52,7 +50,7 @@ class DeepEnsemble(nn.Module):
     
         normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))
 
-        return mean, variance
+        return mean, normalized_variance
 
 
 
@@ -76,9 +74,6 @@ class ValidateTrainTestEnsemble():
         train_loader, val_loader, test_loader = self.loaders
 
         self.paths = os.listdir(load_folder)[:ensemble_size]  # list of saved models in folder
-        assert (
-            len(self.paths) == ensemble_size
-        ), "No. of folder elements does not match ensemble size"
 
         # load models
         for path in self.paths:
@@ -133,25 +128,17 @@ class ValidateTrainTestEnsemble():
                     prob, variance = ensemble_model(x)
                     pred = torch.sigmoid(prob)
                     pred = (pred > 0.5).float()
-                    running_dice += dice_coef(pred, y)
+                    running_dice += dice_coef(pred, y).cpu().numpy()
 
             dice_list.append(running_dice/len(test_loader))
 
-        print(dice_list)
         plt.figure(figsize=(8, 7))
         plt.plot(range(1, self.ensemble_size + 1), dice_list, ".-", label="Dice coeff")
         plt.legend(loc="best")
         plt.xlabel("Number of networks in ensemble")
         plt.ylabel("Dice")
-        plt.title(f"Hello")
-        plt.savefig(save_plot_folder + f"hello.png")
-
-        
-        # save dice score for each model in ensemble
-
-        # for 1st iteration ---> pred = mean(model1(x))
-        # for 2nd iteration ---> pred = mean(model1(x) + model2(x))
-        # and so on
+        plt.title(f"Resunet++ on Kvasir-SEG test set with Dice as loss")
+        plt.savefig(save_plot_folder + f"hello2.png")
 
 
 if __name__ == "__main__":
@@ -162,15 +149,16 @@ if __name__ == "__main__":
             num_workers=4,
             pin_memory=True,
             )
-    save_folder = "/home/feliciaj/PolypSegmentation/results/ensembles_unet/"
+    save_folder = "/home/feliciaj/PolypSegmentation/results/ensembles_resunet++/"
     load_folder = "/home/feliciaj/PolypSegmentation/saved_models/resunet++/"       
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     criterion = DiceLoss()
     model = ResUnetPlusPlus(in_channels=3, out_channels=1) # UNet(in_channels=3, out_channels=1)
-    ensemble_size = 5 
+    ensemble_size = 5
 
     obj = ValidateTrainTestEnsemble(model, ensemble_size, criterion, device, loaders)
     
-    #obj.test_ensembles(save_folder, load_folder)
-    save_plot_folder = "/home/feliciaj/PolypSegmentation/results/figures/"
-    obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder)
+    obj.test_ensembles(save_folder, load_folder)
+    
+    #save_plot_folder = "/home/feliciaj/PolypSegmentation/results/figures/"
+    #obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder)

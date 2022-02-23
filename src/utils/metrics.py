@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 
 
-
 class BCEDiceLoss(nn.Module):
     """
     Args:
@@ -50,6 +49,7 @@ class DiceLoss(nn.Module):
         
         return (1 - dice_coef(pred, truth))
 
+
 def dice_coef(pred, target):
     """
     Dice coefficient used as metric.
@@ -63,8 +63,7 @@ def dice_coef(pred, target):
     intersection = (pred*target).sum()
     union = pred.sum() + target.sum()
 
-    return (2.0 * intersection) / (union+intersection)
-
+    return (2.0 * intersection + 1) / (union + intersection + 1)
 
 
 def iou_score(pred, target):
