@@ -57,13 +57,13 @@ def check_scores(loader, model, device, criterion):
         for x, y in loader:
             x = x.to(device)
             y = y.to(device).unsqueeze(1)
-            pred = torch.sigmoid(model(x))
-            pred = (pred > 0.5).float()
+            prob = torch.sigmoid(model(x))
+            pred = (prob > 0.5).float()
             num_correct += (pred == y).sum()
             num_pixels += torch.numel(pred)
             dice += dice_coef(pred, y)
             iou += iou_score(pred, y)
-            loss.append(criterion(model(x), y).item())
+            loss.append(criterion(model(x), y))
     
     print(f"Accuracy: {num_correct}/{num_pixels} or {num_correct/num_pixels*100:.2f} percent")
     print(f"IoU score: {iou/len(loader)}")
