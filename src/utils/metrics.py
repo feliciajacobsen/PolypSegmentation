@@ -32,17 +32,6 @@ class BCEDiceLoss(nn.Module):
         return bce_loss + (1 - dice_coef)
 
 
-class DiceLoss(nn.Module):
-    def __init__(self, weight=None):
-        super().__init__()
-    
-    def forward(self, input, target):
-        assert input.shape[0] == target.shape[0], "Prediction and GT batch size do not match"
-        pred = torch.sigmoid(input).view(-1) # view(-1) flattens tensor
-        truth = target.view(-1)
-        
-        return (1 - dice_coef(pred, truth))        
-
 
 """
 class DiceLoss(nn.Module):
@@ -191,8 +180,6 @@ class DiceLoss(_Loss):
 
         mask = y_true.sum(dims) > 0
         loss *= mask.to(loss.dtype)
-
-
 
         return loss.mean()
 

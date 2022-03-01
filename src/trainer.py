@@ -36,7 +36,7 @@ def train_model(loader, model, device, optimizer, criterion):
         criterion (torch oject): loss function with backward method.
 
     Returns:
-        None
+        Mean loss 
     """
 
     tqdm_loader = tqdm(loader)  # make progress bar
@@ -48,10 +48,10 @@ def train_model(loader, model, device, optimizer, criterion):
     for batch_idx, (data, targets) in enumerate(tqdm_loader):
         # move data and masks to same device as computed gradients
         data = data.to(device=device)
-        targets = (
-            targets.float().unsqueeze(1).to(device=device)
-        )  # add on channel dimension of 1
-
+        # add channel dimension
+        targets = targets.float().unsqueeze(1).to(device=device)
+          
+        # forward 
         with torch.cuda.amp.autocast():
             output = model(data)
             loss = criterion(output, targets)
@@ -72,7 +72,6 @@ def train_model(loader, model, device, optimizer, criterion):
 
 
 def train_validate(
-    no_models,
     epochs,
     device,
     criterion,
@@ -86,73 +85,70 @@ def train_validate(
     plot_loss,
 ):
     train_loader, val_loader, _ = loaders
-    # train several models with same model architecture sequentially
-    for model_idx in range(no_models):
-        # zero out loss for each model
-        val_epoch_loss = []
-        train_epoch_loss = []
-        for epoch in range(epochs):
+    val_epoch_loss, train_epoch_loss = [], []
+    
+    for epoch in range(epochs):
 
-            # train on training data
-            mean_train_loss = train_model(
-                train_loader, model, device, optimizer, criterion
-            )
-            train_epoch_loss.append(mean_train_loss)
+        # train on training data
+        mean_train_loss = train_model(
+            train_loader, model, device, optimizer, criterion
+        )
+        train_epoch_loss.append(mean_train_loss)
 
-            # check validation loss, and print validation metrics
-            print("------------")
-            print("At epoch %d :" % epoch)
-            mean_val_loss, dice, iou = check_scores(
-                val_loader, model, device, criterion
-            )
-            val_epoch_loss.append(mean_val_loss)
+        # check validation loss, and print validation metrics
+        print("------------")
+        print("At epoch %d :" % epoch)
+        mean_val_loss, _, _ = check_scores(
+            val_loader, model, device, criterion
+        )
+        val_epoch_loss.append(mean_val_loss)
 
-            # take scheduler step
-            if scheduler is not None:
-                scheduler.step(mean_val_loss)
+        # take scheduler step
+        if scheduler is not None:
+            scheduler.step(mean_val_loss)
 
-            # save model after training
-            if epoch == epochs - 1:
-                if save_folder != None:
-                    checkpoint = {
-                        "epoch": epoch,
-                        "state_dict": model.state_dict(),
-                        "optimizer": optimizer.state_dict(),
-                        "criterion": criterion.state_dict(),
-                        "loss": mean_val_loss,
-                    }
-                    # change name of file and run in order to save more models
-                    save_checkpoint(
-                        epoch,
-                        checkpoint,
-                        save_folder + model_name + f"_{model_idx}.pt",
-                    )
+        # save model after training
+        if epoch == epochs - 1:
+            if save_folder != None:
+                checkpoint = {
+                    "epoch": epoch,
+                    "state_dict": model.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "criterion": criterion.state_dict(),
+                    "loss": mean_val_loss,
+                }
+                # change name of file and run in order to save more models
+                save_checkpoint(
+                    epoch,
+                    checkpoint,
+                    save_folder + model_name + "_1.pt",
+                )
 
-            if early_stopping is not None:
-                early_stopping(mean_val_loss)
-                if early_stopping.early_stop:
-                    break
+        if early_stopping is not None:
+            early_stopping(mean_val_loss)
+            if early_stopping.early_stop:
+                break
 
-            # save examples to a folder
-            save_preds_as_imgs(
-                val_loader,
-                model,
-                folder="/home/feliciaj/data/Kvasir-SEG/" + "/" + model_name,
-                device=device,
-            )
+        # save examples to a folder
+        save_preds_as_imgs(
+            val_loader,
+            model,
+            folder="/home/feliciaj/data/Kvasir-SEG/" + "/" + model_name,
+            device=device,
+        )
 
-        if plot_loss:
-            loss_plot_name = "loss_" + model_name + f"_{model_idx}"
-            plt.figure(figsize=(10, 7))
-            plt.plot(train_epoch_loss, color="blue", label="train loss")
-            plt.plot(val_epoch_loss, color="green", label="validataion loss")
-            plt.xlabel("Epochs")
-            plt.ylabel("Loss")
-            plt.title(model_name)
-            plt.legend()
-            plt.savefig(
-                f"/home/feliciaj/PolypSegmentation/results/loss_plots/{loss_plot_name}.png"
-            )
+    if plot_loss:
+        loss_plot_name = "loss_" + model_name 
+        plt.figure(figsize=(10, 7))
+        plt.plot(train_epoch_loss, color="blue", label="train loss")
+        plt.plot(val_epoch_loss, color="green", label="validataion loss")
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.title(model_name)
+        plt.legend()
+        plt.savefig(
+            f"/home/feliciaj/PolypSegmentation/results/loss_plots/{loss_plot_name}.png"
+        )
 
 
 def run_model():
@@ -169,10 +165,9 @@ def run_model():
     config["num_workers"] = 4
     config["image_height"] = 256
     config["image_width"] = 256
-    config["num_models"] = 15  # no. of models to train at once
     config["model_name"] = "unet"
     config["save_folder"] = (
-        "/home/feliciaj/PolypSegmentation/saved_models/" + config["model_name"] #+ "_BCE/"
+        "/home/feliciaj/PolypSegmentation/saved_models/" + config["model_name"] + "_BCE/"
     )
 
     if config["model_name"] == "unet":
@@ -203,15 +198,15 @@ def run_model():
 
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
 
-    #criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
+    criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
     #criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
-    criterion = DiceLoss()  # Sigmoid layer and Dice loss
+    #criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
     # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, factor=0.1, patience=20, min_lr=1e-6
+        optimizer, factor=0.1, patience=20, min_lr=1e-7
     )
 
     early_stopping = None  # EarlyStopping()
@@ -226,7 +221,6 @@ def run_model():
 
 
     train_validate(
-    no_models=config["num_models"],
     epochs=config["num_epochs"],
     device=config["device"],
     criterion=criterion,

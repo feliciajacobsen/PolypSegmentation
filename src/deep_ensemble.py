@@ -55,15 +55,15 @@ class DeepEnsemble(nn.Module):
 
 
 class ValidateTrainTestEnsemble():
-    def __init__(self, model, ensemble_size, criterion, device, loaders):
+    def __init__(self, model, ensemble_size, device, loaders):
         self.model = model
         self.ensemble_size = ensemble_size
         self.device = device
         self.loaders = loaders
         self.ensemble = DeepEnsemble(self.model, self.ensemble_size, self.device)
 
-    def get_dice():
-        pass    
+    def get_dice_iou(self, loader):
+        pass
 
     def test_ensembles(self, save_folder, load_folder):
         """
@@ -137,11 +137,12 @@ class ValidateTrainTestEnsemble():
         plt.legend(loc="best")
         plt.xlabel("Number of networks in ensemble")
         plt.ylabel("Dice")
-        plt.title(f"Resunet++ on Kvasir-SEG test set with Dice as loss")
-        plt.savefig(save_plot_folder + f"hello2.png")
+        plt.title(f"UNet on Kvasir-SEG test set with Dice as loss")
+        plt.savefig(save_plot_folder + ".png")
 
 
 if __name__ == "__main__":
+    model_name = "unet"
     loaders = data_loaders(
             batch_size=32,
             train_transforms=standard_transforms(256, 256),
@@ -149,16 +150,15 @@ if __name__ == "__main__":
             num_workers=4,
             pin_memory=True,
             )
-    save_folder = "/home/feliciaj/PolypSegmentation/results/ensembles_resunet++/"
-    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/resunet++/"       
+    save_folder = "/home/feliciaj/PolypSegmentation/results/" + model_name + "/"
+    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/" + model_name + "/"      
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    criterion = DiceLoss()
     model = ResUnetPlusPlus(in_channels=3, out_channels=1) # UNet(in_channels=3, out_channels=1)
-    ensemble_size = 5
+    ensemble_size = 15
 
-    obj = ValidateTrainTestEnsemble(model, ensemble_size, criterion, device, loaders)
+    obj = ValidateTrainTestEnsemble(model, ensemble_size, device, loaders)
     
     obj.test_ensembles(save_folder, load_folder)
     
-    #save_plot_folder = "/home/feliciaj/PolypSegmentation/results/figures/"
-    #obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder)
+    save_plot_folder = "/home/feliciaj/PolypSegmentation/results/figures/"
+    obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder)
