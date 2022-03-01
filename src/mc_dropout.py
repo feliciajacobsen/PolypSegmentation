@@ -13,8 +13,10 @@ from tqdm import tqdm
 # import models
 from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
-#from unet import UNet_dropout, UNet
+
+# from unet import UNet_dropout, UNet
 from unet_vajira import UNet_dropout
+
 # import from utils subfolder
 from utils.dataloader import data_loaders
 from utils.utils import check_scores, save_grid, standard_transforms
@@ -27,7 +29,9 @@ class MCDropoutSegmentation:
         self.lr = lr
         self.loaders = loaders
         self.train_loader, self.val_loader, self.test_loader = loaders
-        self.model = UNet_dropout(in_channels=3, out_channels=1)#UNet_dropout(in_channels=3, out_channels=1, droprate=droprate)
+        self.model = UNet_dropout(
+            in_channels=3, out_channels=1
+        )  # UNet_dropout(in_channels=3, out_channels=1, droprate=droprate)
         self.model.to(device)
         self.criterion = DiceLoss().to(device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
@@ -96,7 +100,7 @@ class MCDropoutSegmentation:
         return self.val_dice
 
     def train_n_models(
-        self, save_path, save_plot_path, fig_name, rates=[0, 0.1 ,0.3, 0.5], plot=False
+        self, save_path, save_plot_path, fig_name, rates=[0, 0.1, 0.3, 0.5], plot=False
     ):
         """
         save_path : str
@@ -119,16 +123,14 @@ class MCDropoutSegmentation:
         for rate in rates:
             unets.append(
                 MCDropoutSegmentation(
-                    device=self.device, 
-                    loaders=self.loaders, 
-                    droprate=rate
+                    device=self.device, loaders=self.loaders, droprate=rate
                 )
             )
 
         # Save trained models
         for idx, (rate, unet) in enumerate(zip(rates, unets)):
             unet.train_model(save_path + f"unet_rate={rate}.pt", verbose=True)
-            #torch.save(unet.model, save_path + f"unet_rate={rate}.pt")
+            # torch.save(unet.model, save_path + f"unet_rate={rate}.pt")
             torch.save(unet.val_dice, save_path + f"unet_val_dices_rate={rate}.pt")
 
         if plot:
@@ -196,17 +198,17 @@ class MCDropoutSegmentation:
                     output = model(x)
                     prob = torch.sigmoid(output)
                     preds.append(prob)
-            outputs = torch.stack(preds) # shape – (forward_passes, b, c, h, w)
+            outputs = torch.stack(preds)  # shape – (forward_passes, b, c, h, w)
 
             # double precision for mean and variance tensors
             mean = torch.mean(outputs, dim=0).double()
-            #variance = torch.mean((outputs - mean)**2, dim=0).double().cpu()
+            # variance = torch.mean((outputs - mean)**2, dim=0).double().cpu()
             variance = torch.var(outputs, dim=0).double().cpu()
 
             # calculating mean prediction across multiple MCD forward passes
             mean_pred = (mean > 0.5).float()
 
-            if save_imgs==True:
+            if save_imgs == True:
                 self.save_images(batch, mean_pred, variance, y, img_folder)
 
         model.train()
@@ -215,8 +217,8 @@ class MCDropoutSegmentation:
 
     def save_images(self, batch, mean, variance, truth, img_folder):
         """
-        Function saves images from the same batch in a grid. 
-        """   
+        Function saves images from the same batch in a grid.
+        """
         torchvision.utils.save_image(mean, f"{img_folder}/pred_{batch}.png")
         torchvision.utils.save_image(truth, f"{img_folder}/mask_{batch}.png")
         save_grid(
@@ -225,7 +227,6 @@ class MCDropoutSegmentation:
             rows=4,
             cols=8,
         )
-        
 
     def save_scores(self, model_load_path, forward_passes):
         model = torch.load(model_load_path)
@@ -241,7 +242,7 @@ class MCDropoutSegmentation:
                 x = x.to(device)
                 y = y.to(device)
                 if y.shape[1] != 1:
-                    y = y.unsqueeze(1)    
+                    y = y.unsqueeze(1)
                 dice += dice_coef(mean, y)
                 iou += iou_score(mean, y)
 
@@ -311,21 +312,23 @@ if __name__ == "__main__":
 
     passes = 5
     img_folder = "/home/feliciaj/PolypSegmentation/results/mc_dropout_unet"
-    load_path= "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_rate=0.1.pt"
-    mean, var = obj.predict(passes,load_path,True,img_folder)
-    
+    load_path = (
+        "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_rate=0.1.pt"
+    )
+    mean, var = obj.predict(passes, load_path, True, img_folder)
 
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
-    rates = [0, 0.1 ,0.3, 0.5]
-    fig_name = f"U-Net with dropout predicted on Kvasir-SEG validation data with rates={rates}"
-    #obj.train_n_models(save_path, save_plot_path, fig_name, rates, True) # train model
+    rates = [0, 0.1, 0.3, 0.5]
+    fig_name = (
+        f"U-Net with dropout predicted on Kvasir-SEG validation data with rates={rates}"
+    )
+    # obj.train_n_models(save_path, save_plot_path, fig_name, rates, True) # train model
 
-    #obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/unet")
-    
-    #model_path = "/home/feliciaj/PolypSegmentation/saved_models/vajira/unet.pt"  # path to where model is stored
-    #dice_list, iou_list = obj.save_scores(model_path, 15)
+    # obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/unet")
 
-    #save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
-    #plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)
-    
+    # model_path = "/home/feliciaj/PolypSegmentation/saved_models/vajira/unet.pt"  # path to where model is stored
+    # dice_list, iou_list = obj.save_scores(model_path, 15)
+
+    # save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
+    # plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path)

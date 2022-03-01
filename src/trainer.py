@@ -36,7 +36,7 @@ def train_model(loader, model, device, optimizer, criterion):
         criterion (torch oject): loss function with backward method.
 
     Returns:
-        Mean loss 
+        Mean loss
     """
 
     tqdm_loader = tqdm(loader)  # make progress bar
@@ -50,8 +50,8 @@ def train_model(loader, model, device, optimizer, criterion):
         data = data.to(device=device)
         # add channel dimension
         targets = targets.float().unsqueeze(1).to(device=device)
-          
-        # forward 
+
+        # forward
         with torch.cuda.amp.autocast():
             output = model(data)
             loss = criterion(output, targets)
@@ -86,21 +86,17 @@ def train_validate(
 ):
     train_loader, val_loader, _ = loaders
     val_epoch_loss, train_epoch_loss = [], []
-    
+
     for epoch in range(epochs):
 
         # train on training data
-        mean_train_loss = train_model(
-            train_loader, model, device, optimizer, criterion
-        )
+        mean_train_loss = train_model(train_loader, model, device, optimizer, criterion)
         train_epoch_loss.append(mean_train_loss)
 
         # check validation loss, and print validation metrics
         print("------------")
         print("At epoch %d :" % epoch)
-        mean_val_loss, _, _ = check_scores(
-            val_loader, model, device, criterion
-        )
+        mean_val_loss, _, _ = check_scores(val_loader, model, device, criterion)
         val_epoch_loss.append(mean_val_loss)
 
         # take scheduler step
@@ -133,12 +129,12 @@ def train_validate(
         save_preds_as_imgs(
             val_loader,
             model,
-            folder="/home/feliciaj/data/Kvasir-SEG/" + "/" + model_name,
+            folder="/home/feliciaj/data/Kvasir-SEG/" + model_name,
             device=device,
         )
 
     if plot_loss:
-        loss_plot_name = "loss_" + model_name 
+        loss_plot_name = "loss_" + model_name
         plt.figure(figsize=(10, 7))
         plt.plot(train_epoch_loss, color="blue", label="train loss")
         plt.plot(val_epoch_loss, color="green", label="validataion loss")
@@ -167,7 +163,9 @@ def run_model():
     config["image_width"] = 256
     config["model_name"] = "unet"
     config["save_folder"] = (
-        "/home/feliciaj/PolypSegmentation/saved_models/" + config["model_name"] + "_BCE/"
+        "/home/feliciaj/PolypSegmentation/saved_models/"
+        + config["model_name"]
+        + "_BCE/"
     )
 
     if config["model_name"] == "unet":
@@ -198,9 +196,9 @@ def run_model():
 
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
 
-    criterion = nn.BCEWithLogitsLoss() #  Sigmoid layer and the BCELoss
-    #criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
-    #criterion = DiceLoss()  # Sigmoid layer and Dice loss
+    criterion = nn.BCEWithLogitsLoss()  #  Sigmoid layer and the BCELoss
+    # criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
+    # criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
@@ -219,19 +217,18 @@ def run_model():
         pin_memory=config["pin_memory"],
     )
 
-
     train_validate(
-    epochs=config["num_epochs"],
-    device=config["device"],
-    criterion=criterion,
-    model=model,
-    optimizer=optimizer,
-    scheduler=scheduler,
-    loaders=loaders,
-    save_folder=config["save_folder"],
-    model_name=config["model_name"],
-    early_stopping=early_stopping,
-    plot_loss=config["plot_loss"],
+        epochs=config["num_epochs"],
+        device=config["device"],
+        criterion=criterion,
+        model=model,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        loaders=loaders,
+        save_folder=config["save_folder"],
+        model_name=config["model_name"],
+        early_stopping=early_stopping,
+        plot_loss=config["plot_loss"],
     )
 
 

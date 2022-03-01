@@ -36,25 +36,28 @@ class DeepEnsemble(nn.Module):
         self.model_list = []
         for i in range(ensemble_size):
             self.model_list.append(model.to(device))
-       
+
     def forward(self, x):
         inputs = []
         for model in self.model_list:
             inputs.append(model(x.clone()))
-        outputs = torch.stack(inputs) # shape – (ensemble_size, b, c, w, h)
+        outputs = torch.stack(inputs)  # shape – (ensemble_size, b, c, w, h)
 
-        mean = torch.mean(outputs, dim=0).double()  # element wise mean from output of ensemble models
+        mean = torch.mean(
+            outputs, dim=0
+        ).double()  # element wise mean from output of ensemble models
         pred = torch.sigmoid(outputs)
         mean_pred = torch.sigmoid(mean).double()  # only extract class prob
-        variance = torch.mean((pred - mean_pred)**2 , dim=0).double()
-    
-        normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))
+        variance = torch.mean((pred - mean_pred) ** 2, dim=0).double()
+
+        normalized_variance = (variance - torch.min(variance)) / (
+            torch.max(variance) - torch.min(variance)
+        )
 
         return mean, normalized_variance
 
 
-
-class ValidateTrainTestEnsemble():
+class ValidateTrainTestEnsemble:
     def __init__(self, model, ensemble_size, device, loaders):
         self.model = model
         self.ensemble_size = ensemble_size
@@ -73,7 +76,8 @@ class ValidateTrainTestEnsemble():
 
         train_loader, val_loader, test_loader = self.loaders
 
-        self.paths = os.listdir(load_folder)[:ensemble_size]  # list of saved models in folder
+        # list of saved models in folder
+        self.paths = os.listdir(load_folder)[:ensemble_size]  
 
         # load models
         for path in self.paths:
@@ -109,19 +113,19 @@ class ValidateTrainTestEnsemble():
         self.model.train()
 
     def plot_dice_vs_ensemble_size(self, save_plot_folder, load_folder):
-        paths = os.listdir(load_folder)[:self.ensemble_size]
+        paths = os.listdir(load_folder)[: self.ensemble_size]
         for path in paths:
             checkpoint = torch.load(load_folder + path)
             self.model.load_state_dict(checkpoint["state_dict"], strict=False)
 
         _, _, test_loader = self.loaders
-        
+
         dice_list = []
         for i in range(self.ensemble_size):
             running_dice = 0
-            ensemble_model = DeepEnsemble(self.model, i+1, self.device)
+            ensemble_model = DeepEnsemble(self.model, i + 1, self.device)
             self.model.eval()
-            for batch, (x,y) in enumerate(test_loader):
+            for batch, (x, y) in enumerate(test_loader):
                 with torch.no_grad():
                     y = y.to(device=self.device).unsqueeze(1)
                     x = x.to(device=self.device)
@@ -130,7 +134,7 @@ class ValidateTrainTestEnsemble():
                     pred = (pred > 0.5).float()
                     running_dice += dice_coef(pred, y).cpu().numpy()
 
-            dice_list.append(running_dice/len(test_loader))
+            dice_list.append(running_dice / len(test_loader))
 
         plt.figure(figsize=(8, 7))
         plt.plot(range(1, self.ensemble_size + 1), dice_list, ".-", label="Dice coeff")
@@ -144,21 +148,23 @@ class ValidateTrainTestEnsemble():
 if __name__ == "__main__":
     model_name = "unet"
     loaders = data_loaders(
-            batch_size=32,
-            train_transforms=standard_transforms(256, 256),
-            val_transforms=standard_transforms(256, 256),
-            num_workers=4,
-            pin_memory=True,
-            )
+        batch_size=32,
+        train_transforms=standard_transforms(256, 256),
+        val_transforms=standard_transforms(256, 256),
+        num_workers=4,
+        pin_memory=True,
+    )
     save_folder = "/home/feliciaj/PolypSegmentation/results/" + model_name + "/"
-    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/" + model_name + "/"      
+    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/" + model_name + "/"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ResUnetPlusPlus(in_channels=3, out_channels=1) # UNet(in_channels=3, out_channels=1)
+    model = ResUnetPlusPlus(
+        in_channels=3, out_channels=1
+    )  # UNet(in_channels=3, out_channels=1)
     ensemble_size = 15
 
     obj = ValidateTrainTestEnsemble(model, ensemble_size, device, loaders)
-    
+
     obj.test_ensembles(save_folder, load_folder)
-    
+
     save_plot_folder = "/home/feliciaj/PolypSegmentation/results/figures/"
     obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder)
