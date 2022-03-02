@@ -117,7 +117,7 @@ def train_validate(
                 save_checkpoint(
                     epoch,
                     checkpoint,
-                    save_folder + model_name + "_1.pt",
+                    save_folder + model_name + "_6.pt",
                 )
 
         if early_stopping is not None:
@@ -204,7 +204,11 @@ def run_model():
 
     # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, factor=0.1, patience=20, min_lr=1e-7
+        optimizer, 
+        factor=0.1, 
+        patience=20, 
+        min_lr=1e-7,
+        verbose=True,
     )
 
     early_stopping = None  # EarlyStopping()

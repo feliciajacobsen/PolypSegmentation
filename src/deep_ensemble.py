@@ -50,9 +50,7 @@ class DeepEnsemble(nn.Module):
         mean_pred = torch.sigmoid(mean).double()  # only extract class prob
         variance = torch.mean((pred - mean_pred) ** 2, dim=0).double()
 
-        normalized_variance = (variance - torch.min(variance)) / (
-            torch.max(variance) - torch.min(variance)
-        )
+        normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))
 
         return mean, normalized_variance
 
@@ -97,7 +95,7 @@ class ValidateTrainTestEnsemble:
                 dice += dice_coef(pred, y)
                 iou += iou_score(pred, y)
                 variance = variance.cpu().detach()
-
+                
                 torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png")
                 torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
                 save_grid(
@@ -132,7 +130,7 @@ class ValidateTrainTestEnsemble:
                     prob, variance = ensemble_model(x)
                     pred = torch.sigmoid(prob)
                     pred = (pred > 0.5).float()
-                    running_dice += dice_coef(pred, y).cpu().numpy()
+                    running_dice += dice_coef(pred, y)
 
             dice_list.append(running_dice / len(test_loader))
 
@@ -142,11 +140,10 @@ class ValidateTrainTestEnsemble:
         plt.xlabel("Number of networks in ensemble")
         plt.ylabel("Dice")
         plt.title(f"UNet on Kvasir-SEG test set with Dice as loss")
-        plt.savefig(save_plot_folder + ".png")
+        plt.savefig(save_plot_folder + "hello.png")
 
 
 if __name__ == "__main__":
-    model_name = "unet"
     loaders = data_loaders(
         batch_size=32,
         train_transforms=standard_transforms(256, 256),
@@ -154,13 +151,11 @@ if __name__ == "__main__":
         num_workers=4,
         pin_memory=True,
     )
-    save_folder = "/home/feliciaj/PolypSegmentation/results/" + model_name + "/"
-    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/" + model_name + "/"
+    save_folder = "/home/feliciaj/PolypSegmentation/results/ensembles_unet/"
+    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/unet_BCE/"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ResUnetPlusPlus(
-        in_channels=3, out_channels=1
-    )  # UNet(in_channels=3, out_channels=1)
-    ensemble_size = 15
+    model = UNet(in_channels=3, out_channels=1) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
+    ensemble_size = 6
 
     obj = ValidateTrainTestEnsemble(model, ensemble_size, device, loaders)
 
