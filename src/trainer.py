@@ -117,7 +117,7 @@ def train_validate(
                 save_checkpoint(
                     epoch,
                     checkpoint,
-                    save_folder + model_name + "_6.pt",
+                    save_folder + model_name + "_8.pt",
                 )
 
         if early_stopping is not None:
