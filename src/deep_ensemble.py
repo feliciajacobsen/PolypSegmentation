@@ -11,7 +11,7 @@ import numpy as np
 from unet import UNet
 from doubleunet import DoubleUNet
 from resunetplusplus import ResUnetPlusPlus
-from utils.dataloader import data_loaders, etis_larib_loader
+from utils.dataloader import data_loaders, etis_larib_loader, cvc_clinic_loader
 from utils.utils import save_grid, standard_transforms
 from utils.metrics import DiceLoss, dice_coef, iou_score
 
@@ -150,21 +150,22 @@ if __name__ == "__main__":
     )
     """
 
-    test_loader = etis_larib_loader(
+    test_loader = cvc_clinic_loader(
+        batch_size=32,
         transforms=standard_transforms(256, 256),
         num_workers=4,
         pin_memory=True,
     )
 
-    save_folder = "/home/feliciaj/PolypSegmentation/results/results_etis/"
+    save_folder = "/home/feliciaj/PolypSegmentation/results/results_cvc_clinic/"
     load_folder = "/home/feliciaj/PolypSegmentation/saved_models/unet_BCE/"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = UNet(in_channels=3, out_channels=1) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
-    ensemble_size = 6
+    ensemble_size = 9
 
     obj = ValidateTrainTestEnsemble(model, ensemble_size, device, test_loader)
 
     obj.test_ensembles(save_folder, load_folder)
 
-    save_plot_folder = "/home/feliciaj/PolypSegmentation/results/results_etis/"
-    obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder)
+    #save_plot_folder = "/home/feliciaj/PolypSegmentation/results/results_etis/"
+    #obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder)

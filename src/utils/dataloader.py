@@ -128,7 +128,7 @@ def data_loaders(batch_size, train_transforms, val_transforms, num_workers, pin_
     return train_loader, val_loader, test_loader
 
 
-def etis_larib_loader(transforms, num_workers, pin_memory):
+def etis_larib_loader(batch_size, transforms, num_workers, pin_memory):
     """
     Function returns an iterable-style dataset of ETIS-Larib dataset. 
     """
@@ -143,7 +143,7 @@ def etis_larib_loader(transforms, num_workers, pin_memory):
 
     loader = DataLoader(
         ds,
-        batch_size = 1,
+        batch_size = batch_size,
         num_workers = num_workers,
         pin_memory = pin_memory,
         shuffle = True,
@@ -151,6 +151,29 @@ def etis_larib_loader(transforms, num_workers, pin_memory):
 
     return loader
 
+
+def cvc_clinic_loader(batch_size, transforms, num_workers, pin_memory):
+    """
+    Function returns an iterable-style dataset of CVC ClincDB dataset. 
+    """
+    img_dir = "/home/feliciaj/data/CVC-ClinicDB/images"
+    mask_dir = "/home/feliciaj/data/CVC-ClinicDB/masks"
+
+    ds = KvasirSEGDataset(
+        image_dir = img_dir,
+        mask_dir = mask_dir,
+        transform = transforms,
+    )
+
+    loader = DataLoader(
+        ds,
+        batch_size = batch_size,
+        num_workers = num_workers,
+        pin_memory = pin_memory,
+        shuffle = True,
+    )
+
+    return loader
 
 
 def move_images(train_frac=0.8, test_frac=0.1):
