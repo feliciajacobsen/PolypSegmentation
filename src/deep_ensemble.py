@@ -108,7 +108,7 @@ class ValidateTrainTestEnsemble:
 
         self.model.train()
 
-    def plot_dice_vs_ensemble_size(self, save_plot_folder, load_folder):
+    def plot_dice_vs_ensemble_size(self, save_plot_folder, load_folder, title):
         paths = os.listdir(load_folder)[: self.ensemble_size]
         for path in paths:
             checkpoint = torch.load(load_folder + path)
@@ -135,7 +135,7 @@ class ValidateTrainTestEnsemble:
         plt.legend(loc="best")
         plt.xlabel("Number of networks in ensemble")
         plt.ylabel("Dice")
-        plt.title(f"UNet on Kvasir-SEG test set with Dice as loss")
+        plt.title(title)
         plt.savefig(save_plot_folder + "hello.png")
 
 
@@ -157,8 +157,10 @@ if __name__ == "__main__":
         pin_memory=True,
     )
 
-    save_folder = "/home/feliciaj/PolypSegmentation/results/results_cvc_clinic/"
-    load_folder = "/home/feliciaj/PolypSegmentation/saved_models/unet_BCE/"
+    main_root = "/home/feliciaj/PolypSegmentation"
+
+    save_folder = main_root + "/results/ensembles_unetBCE/"
+    load_folder = main_root + "/saved_models/unet_BCE/"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = UNet(in_channels=3, out_channels=1) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
     ensemble_size = 9
@@ -167,5 +169,6 @@ if __name__ == "__main__":
 
     obj.test_ensembles(save_folder, load_folder)
 
-    #save_plot_folder = "/home/feliciaj/PolypSegmentation/results/results_etis/"
-    #obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder)
+    save_plot_folder = main_root + "/results/results_cvc/plots/"
+    title = "Deep Ensemble of UNets trained with BCE loss and tested on CVC-ClinicDB"
+    obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder, title)
