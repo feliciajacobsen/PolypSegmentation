@@ -114,9 +114,9 @@ class ValidateTrainTestEnsemble:
             checkpoint = torch.load(load_folder + path)
             self.model.load_state_dict(checkpoint["state_dict"], strict=False)
 
-        dice_list = []
+        dice_list, NLL_list = [], []
         for i in range(self.ensemble_size):
-            running_dice = 0
+            running_dice, running_NLL = 0, 0
             ensemble_model = DeepEnsemble(self.model, i + 1, self.device)
             self.model.eval()
             for batch, (x, y) in enumerate(self.loader):
@@ -126,13 +126,11 @@ class ValidateTrainTestEnsemble:
                     prob, variance = ensemble_model(x)
                     pred = torch.sigmoid(prob)
                     pred = (pred > 0.5).float()
-                    running_dice += dice_coef(pred, y).item()
-                    #running_BCE +=
-                    #running_DSC += 
+                    running_dice += dice_coef(pred, y)
+                    running_NLL += nn.NLLLoss()(pred, y).item()
 
             dice_list.append(running_dice / len(self.loader))
-
-        print(dice_list)
+            NLL_list.append(running_NLL / len(self.loader))
 
         plt.figure(figsize=(8, 7))
         plt.plot(range(1, self.ensemble_size + 1), dice_list, ".-", label="Dice coeff")
@@ -140,7 +138,15 @@ class ValidateTrainTestEnsemble:
         plt.xlabel("Number of networks in ensemble")
         plt.ylabel("Dice")
         plt.title(title)
-        plt.savefig(save_plot_folder + "hello2.png")
+        plt.savefig(save_plot_folder + "ensembles_vs_dice.png")
+
+        plt.figure(figsize=(8, 7))
+        plt.plot(range(1, self.ensemble_size + 1), NLL_list, ".-", label="BCE loss")
+        plt.legend(loc="best")
+        plt.xlabel("Number of networks in ensemble")
+        plt.ylabel("NLL")
+        plt.title(title)
+        plt.savefig(save_plot_folder + "ensembles_vs_NLL.png")
 
 
 if __name__ == "__main__":

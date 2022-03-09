@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import numpy as np
 from torch.nn.modules.loss import _Loss
-import torch.nn.functional as F
 
 
 class BCEDiceLoss(nn.Module):
@@ -31,7 +30,7 @@ class BCEDiceLoss(nn.Module):
 
 
 class DiceLoss(nn.Module):
-     def __init__(self, weight=None):
+    def __init__(self, weight=None):
         super().__init__()
 
     def forward(self, input, target):
@@ -89,8 +88,6 @@ def dice_coef(preds, labels, EMPTY=1., ignore=None, per_image=True):
         dices.append(dice)
     dice = mean(dices)    # mean accross images if per_image
     return dice
-
-
 
 
 def iou_score(preds, labels, EMPTY=1., ignore=None, per_image=True):
