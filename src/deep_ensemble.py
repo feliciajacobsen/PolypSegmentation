@@ -127,6 +127,8 @@ class ValidateTrainTestEnsemble:
                     pred = torch.sigmoid(prob)
                     pred = (pred > 0.5).float()
                     running_dice += dice_coef(pred, y).item()
+                    #running_BCE +=
+                    #running_DSC += 
 
             dice_list.append(running_dice / len(self.loader))
 
