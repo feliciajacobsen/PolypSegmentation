@@ -122,7 +122,7 @@ def data_loaders(batch_size, train_transforms, val_transforms, num_workers, pin_
         batch_size = batch_size,
         num_workers = num_workers,
         pin_memory = pin_memory,
-        shuffle = False,
+        shuffle = True,
     ) 
 
     return train_loader, val_loader, test_loader
@@ -158,7 +158,7 @@ def cvc_clinic_loader(batch_size, transforms, num_workers, pin_memory):
     """
     img_dir = "/home/feliciaj/data/CVC-ClinicDB/images"
     mask_dir = "/home/feliciaj/data/CVC-ClinicDB/masks"
-
+    
     ds = KvasirSEGDataset(
         image_dir = img_dir,
         mask_dir = mask_dir,

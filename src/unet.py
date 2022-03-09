@@ -119,7 +119,7 @@ class UNet(nn.Module):
         # Upsample Image
         self.up1 = Upsample(
             1024, 256
-        )  # output channel here is half as large as input channel in next block due to skip connections
+        )  # output channel is half as large as input channel in next block due to skip connections
         self.up2 = Upsample(512, 128)
         self.up3 = Upsample(256, 64)
         self.up4 = Upsample(128, 64)

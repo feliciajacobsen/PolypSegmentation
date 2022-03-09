@@ -126,9 +126,11 @@ class ValidateTrainTestEnsemble:
                     prob, variance = ensemble_model(x)
                     pred = torch.sigmoid(prob)
                     pred = (pred > 0.5).float()
-                    running_dice += dice_coef(pred, y)
+                    running_dice += dice_coef(pred, y).item()
 
             dice_list.append(running_dice / len(self.loader))
+
+        print(dice_list)
 
         plt.figure(figsize=(8, 7))
         plt.plot(range(1, self.ensemble_size + 1), dice_list, ".-", label="Dice coeff")
@@ -136,39 +138,56 @@ class ValidateTrainTestEnsemble:
         plt.xlabel("Number of networks in ensemble")
         plt.ylabel("Dice")
         plt.title(title)
-        plt.savefig(save_plot_folder + "hello.png")
+        plt.savefig(save_plot_folder + "hello2.png")
 
 
 if __name__ == "__main__":
-    """
-    _, _, test_loader = data_loaders(
+
+    data = "kvasir"
+    
+    _, _, kvasir_loader = data_loaders(
         batch_size=32,
         train_transforms=standard_transforms(256, 256),
         val_transforms=standard_transforms(256, 256),
         num_workers=4,
         pin_memory=True,
     )
-    """
 
-    test_loader = cvc_clinic_loader(
-        batch_size=32,
-        transforms=standard_transforms(256, 256),
-        num_workers=4,
-        pin_memory=True,
+    
+    etis_loader = etis_larib_loader(
+            batch_size=32,
+            transforms=standard_transforms(256, 256),
+            num_workers=4,
+            pin_memory=True,
     )
 
     main_root = "/home/feliciaj/PolypSegmentation"
-
-    save_folder = main_root + "/results/ensembles_unetBCE/"
     load_folder = main_root + "/saved_models/unet_BCE/"
+
+    if data=="etis":
+        save_folder = main_root + "/results/results_etis/ensembles_unetBCE/"
+        save_plot_folder = main_root + "/results/results_etis/plots/"
+        title = "Deep Ensemble of UNets trained with BCE loss and tested on ETIS-Larib"
+        test_loader = etis_loader
+
+    elif data=="kvasir":
+        save_folder = main_root + "/results/results_kvasir/ensembles_unetBCE/"
+        save_plot_folder = main_root + "/results/results_kvasir/plots/"
+        title = "Deep Ensemble of UNets trained with BCE loss and tested on Kvasir-SEG"
+        test_loader = kvasir_loader
+
+    else:
+        save_folder = main_root + "/results/results_cvc/ensembles_unetBCE/"
+        save_plot_folder = main_root + "/results/results_cvc/plots/"
+        title = "Deep Ensemble of UNets trained with BCE loss and tested on CVC-ClinicDB"  
+        #test_loader = cvc_loader
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = UNet(in_channels=3, out_channels=1) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
-    ensemble_size = 9
+    ensemble_size = 12
 
     obj = ValidateTrainTestEnsemble(model, ensemble_size, device, test_loader)
 
     obj.test_ensembles(save_folder, load_folder)
 
-    save_plot_folder = main_root + "/results/results_cvc/plots/"
-    title = "Deep Ensemble of UNets trained with BCE loss and tested on CVC-ClinicDB"
     obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder, title)
