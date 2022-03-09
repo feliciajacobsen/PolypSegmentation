@@ -127,7 +127,7 @@ class ValidateTrainTestEnsemble:
                     pred = torch.sigmoid(prob)
                     pred = (pred > 0.5).float()
                     running_dice += dice_coef(pred, y)
-                    running_NLL += nn.NLLLoss()(pred, y).item()
+                    running_NLL += nn.BCEWithLogitsLoss()(prob, y).item() 
 
             dice_list.append(running_dice / len(self.loader))
             NLL_list.append(running_NLL / len(self.loader))
