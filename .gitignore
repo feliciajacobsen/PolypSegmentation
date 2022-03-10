@@ -132,3 +132,5 @@ dmypy.json
 run.sbatch
 saved_models
 slurm_output
+run_loop.sbatch
+train_n_models.sh

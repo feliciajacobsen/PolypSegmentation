@@ -33,6 +33,19 @@ def get_mean_std(loader):
     return mean, std
 
 
+def get_class_weights(loader):
+
+    num_zeros, num_ones = 0,0 
+    for data, labels in loader:
+        num_zeros += torch.sum(labels==0)
+        num_ones += torch.sum(labels==1)
+
+    return num_zeros/len(loader), num_ones/len(loader)
+        
+        
+
+
+
 def check_scores(loader, model, device, criterion):
     """
     Validate for one epoch. Prints accuracy, Dice/F1 and IoU score.

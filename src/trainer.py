@@ -1,3 +1,4 @@
+import sys
 import torch
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
@@ -83,6 +84,7 @@ def train_validate(
     model_name,
     early_stopping,
     plot_loss,
+    number,
 ):
     train_loader, val_loader, _ = loaders
     val_epoch_loss, train_epoch_loss = [], []
@@ -117,7 +119,7 @@ def train_validate(
                 save_checkpoint(
                     epoch,
                     checkpoint,
-                    save_folder + model_name + "_11.pt",
+                    save_folder + model_name + f"_{number}.pt",
                 )
 
         if early_stopping is not None:
@@ -147,7 +149,7 @@ def train_validate(
         )
 
 
-def run_model():
+def run_model(number):
     config = dict()
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -233,8 +235,10 @@ def run_model():
         model_name=config["model_name"],
         early_stopping=early_stopping,
         plot_loss=config["plot_loss"],
+        number=number,
     )
 
 
 if __name__ == "__main__":
-    run_model()
+    number = int(sys.argv[1])
+    run_model(number)

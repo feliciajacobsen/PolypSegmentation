@@ -6,10 +6,6 @@ import torchvision
 import numpy as np
 import shutil
 
-seed = 24
-torch.manual_seed(seed)
-torch.cuda.manual_seed_all(seed)
-
 class KvasirSEGDataset(Dataset):
     """
     Class provides with image and mask, or alternatively
@@ -122,7 +118,7 @@ def data_loaders(batch_size, train_transforms, val_transforms, num_workers, pin_
         batch_size = batch_size,
         num_workers = num_workers,
         pin_memory = pin_memory,
-        shuffle = True,
+        shuffle = False,
     ) 
 
     return train_loader, val_loader, test_loader

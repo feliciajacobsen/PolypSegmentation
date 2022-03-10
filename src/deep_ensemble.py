@@ -12,8 +12,8 @@ from unet import UNet
 from doubleunet import DoubleUNet
 from resunetplusplus import ResUnetPlusPlus
 from utils.dataloader import data_loaders, etis_larib_loader, cvc_clinic_loader
-from utils.utils import save_grid, standard_transforms
-from utils.metrics import DiceLoss, dice_coef, iou_score
+from utils.utils import save_grid, standard_transforms, get_class_weights
+from utils.metrics import dice_coef, iou_score
 
 
 class DeepEnsemble(nn.Module):
@@ -114,9 +114,9 @@ class ValidateTrainTestEnsemble:
             checkpoint = torch.load(load_folder + path)
             self.model.load_state_dict(checkpoint["state_dict"], strict=False)
 
-        dice_list, NLL_list = [], []
+        dice_list, NLL_list, DSCL_list = [], [], []
         for i in range(self.ensemble_size):
-            running_dice, running_NLL = 0, 0
+            running_dice, running_NLL, running_DSCL = 0, 0, 0 
             ensemble_model = DeepEnsemble(self.model, i + 1, self.device)
             self.model.eval()
             for batch, (x, y) in enumerate(self.loader):
@@ -127,7 +127,7 @@ class ValidateTrainTestEnsemble:
                     pred = torch.sigmoid(prob)
                     pred = (pred > 0.5).float()
                     running_dice += dice_coef(pred, y)
-                    running_NLL += nn.BCEWithLogitsLoss()(prob, y).item() 
+                    running_NLL += nn.BCEWithLogitsLoss()(prob, y)
 
             dice_list.append(running_dice / len(self.loader))
             NLL_list.append(running_NLL / len(self.loader))
@@ -140,21 +140,36 @@ class ValidateTrainTestEnsemble:
         plt.title(title)
         plt.savefig(save_plot_folder + "ensembles_vs_dice.png")
 
-        plt.figure(figsize=(8, 7))
-        plt.plot(range(1, self.ensemble_size + 1), NLL_list, ".-", label="BCE loss")
-        plt.legend(loc="best")
-        plt.xlabel("Number of networks in ensemble")
-        plt.ylabel("NLL")
-        plt.title(title)
-        plt.savefig(save_plot_folder + "ensembles_vs_NLL.png")
+
+def load_and_test(loader, device):
+    model = UNet(in_channels=3, out_channels=1)
+    model.to(device=device)
+    save_folder = "/home/feliciaj/PolypSegmentation/results/results_kvasir/examples1/"
+    checkpoint = torch.load("/home/feliciaj/PolypSegmentation/saved_models/unet_BCE/unet_0.pt")
+    model.load_state_dict(checkpoint["state_dict"], strict=False)
+    model.eval()
+    for batch, (x, y) in enumerate(loader):
+        with torch.no_grad():
+            y = y.to(device).unsqueeze(1)
+            x = x.to(device)
+            prob = model(x)
+            pred = torch.sigmoid(prob)
+            pred = (pred > 0.5).float()
+            dice = dice_coef(pred, y)
+            print(f"For image no. {batch}, dice={dice}")
+
+        torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png")
+        torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
 
 
 if __name__ == "__main__":
 
+    print("Hello, this is a sanity check! The random number this time is:", torch.randint())
+
     data = "kvasir"
     
     _, _, kvasir_loader = data_loaders(
-        batch_size=32,
+        batch_size=1,
         train_transforms=standard_transforms(256, 256),
         val_transforms=standard_transforms(256, 256),
         num_workers=4,
@@ -194,8 +209,12 @@ if __name__ == "__main__":
     model = UNet(in_channels=3, out_channels=1) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
     ensemble_size = 12
 
+    load_and_test(kvasir_loader, device)
+
     obj = ValidateTrainTestEnsemble(model, ensemble_size, device, test_loader)
 
-    obj.test_ensembles(save_folder, load_folder)
+    #get_class_weights(test_loader)
 
-    obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder, title)
+    #obj.test_ensembles(save_folder, load_folder)
+
+    #obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder, title)
