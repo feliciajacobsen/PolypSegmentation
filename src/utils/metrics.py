@@ -63,7 +63,7 @@ def dice_coef(pred, target):
 """
 
 
-def dice_coef(preds, labels, per_image=True):
+def dice_coef(preds, labels, per_image=False):
     """
     Binary Dice for foreground class
     binary: 1 foreground, 0 background
@@ -89,7 +89,7 @@ def dice_coef(preds, labels, per_image=True):
     return dice
 
 
-def iou_score(preds, labels, EMPTY=1., ignore=None, per_image=True):
+def iou_score(preds, labels, EMPTY=1., ignore=None, per_image=False):
     """
     Binary IoU for foreground class
     binary: 1 foreground, 0 background

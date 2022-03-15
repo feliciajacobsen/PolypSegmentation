@@ -171,19 +171,6 @@ def save_grid(ims, folder, rows=None, cols=None):
     fig.savefig(folder, transparent=False)
 
 
-def save_var_as_imgs(model, loader, folder, rows, cols, device="cpu"):
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-
-    model.eval()
-    for batch, (x,y) in enumerate(loader):
-        x = x.to(device=device)
-        with torch.no_grad():
-            _, variance = model(x)
-            save_grid(variance, folder, rows, cols)
-    model.train()
-
-
 def standard_transforms(height, width):
     transforms = A.Compose(
         [   

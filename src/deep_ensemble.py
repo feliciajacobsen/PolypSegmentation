@@ -37,16 +37,18 @@ class DeepEnsemble(nn.Module):
     def forward(self, x):
         inputs = []
         for model in self.model_list:
-            model.eval()
-            inputs.append(model(x.clone()))
-        outputs = torch.stack(inputs)  # shape – (ensemble_size, b, c, w, h)
+            model.eval() 
+            inputs.append(model(x))
+            for param in model.parameters():
+                param.requires_grad_(False)
 
+        outputs = torch.stack(inputs)  # shape – (ensemble_size, b, c, w, h)
         sigmoided = torch.sigmoid(outputs) # convert to probabilities
         mean = torch.mean(sigmoided, dim=0) # take mean along stack dimension
         variance = torch.mean((sigmoided - mean) ** 2, dim=0).double()
         normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))
 
-        return mean, normalized_variance
+        return mean, variance
 
 
 class ValidateTrainTestEnsemble:
@@ -66,29 +68,23 @@ class ValidateTrainTestEnsemble:
 
         """
 
-        # list of saved models in folder
-        self.paths = os.listdir(load_folder)[:ensemble_size]  
-
-        # load models
-        for path in self.paths:
+        # load models from where they are saved
+        for path in os.listdir(load_folder)[:ensemble_size]:
             checkpoint = torch.load(load_folder + path)
             self.model.load_state_dict(checkpoint["state_dict"], strict=False)
 
-        self.model.eval()
-        model = self.ensemble
         dice, iou = 0, 0
         with torch.no_grad():
             for batch, (x, y) in enumerate(self.loader):
                 y = y.to(device=device).unsqueeze(1)
                 x = x.to(device=device)
-                prob, variance = model(x)
+                prob, variance = self.ensemble(x)
                 pred = (prob > 0.5).float()
                 dice += dice_coef(pred, y)
                 iou += iou_score(pred, y)
                 variance = variance.cpu().detach()
 
-                print(variance)
-                
+                # save images to save_folder
                 torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png")
                 torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
                 torchvision.utils.save_image(x, f"{save_folder}/input_{batch}.png")
@@ -98,11 +94,9 @@ class ValidateTrainTestEnsemble:
                     rows=4,
                     cols=8,
                 )
-
         print(f"IoU score: {iou/len(self.loader)}")
         print(f"Dice score: {dice/len(self.loader)}")
 
-        self.model.train()
 
     def plot_dice_vs_ensemble_size(self, save_plot_folder, load_folder, title):
         paths = os.listdir(load_folder)[: self.ensemble_size]
@@ -110,7 +104,7 @@ class ValidateTrainTestEnsemble:
             checkpoint = torch.load(load_folder + path)
             self.model.load_state_dict(checkpoint["state_dict"], strict=False)
 
-        dice_list, NLL_list, DSCL_list = [], [], []
+        dice_list = []
         for i in range(self.ensemble_size):
             running_dice, running_NLL = 0, 0
             ensemble_model = DeepEnsemble(self.model, i + 1, self.device)
@@ -122,14 +116,10 @@ class ValidateTrainTestEnsemble:
                     prob, variance = ensemble_model(x)
                     pred = (prob > 0.5).float()
                     running_dice += dice_coef(pred, y)
-                    running_NLL += nn.BCEWithLogitsLoss()(pred, y)
-
             dice_list.append(running_dice / len(self.loader))
-            NLL_list.append(running_NLL / len(self.loader))
 
         plt.figure(figsize=(8, 7))
         plt.plot(range(1, self.ensemble_size + 1), dice_list, ".-")
-        #plt.plot(range(1, self.ensemble_size + 1), NLL_list, ".-", label="NLL")
         #plt.legend(loc="best")
         plt.xlabel("Number of networks in ensemble")
         plt.ylabel("Score")
@@ -142,7 +132,7 @@ def load_and_test(loader, device):
     model.to(device=device)
     save_folder = "/home/feliciaj/PolypSegmentation/results/results_kvasir/examples1/"
     checkpoint = torch.load("/home/feliciaj/PolypSegmentation/saved_models/unet_BCE/unet_0.pt")
-    model.load_state_dict(checkpoint["state_dict"], strict=False)
+    model.load_state_dict(checkpoint["state_dict"])
     model.eval()
     for batch, (x, y) in enumerate(loader):
         with torch.no_grad():
@@ -203,7 +193,11 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = UNet(in_channels=3, out_channels=1) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
-    ensemble_size = 16
+    ensemble_size = 2
+
+    load_and_test(test_loader, device)
+
+    """
 
     obj = ValidateTrainTestEnsemble(model, ensemble_size, device, test_loader)
 
@@ -212,3 +206,4 @@ if __name__ == "__main__":
     obj.test_ensembles(save_folder, load_folder)
 
     obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder, title)
+    """
