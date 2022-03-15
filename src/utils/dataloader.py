@@ -118,7 +118,7 @@ def data_loaders(batch_size, train_transforms, val_transforms, num_workers, pin_
         batch_size = batch_size,
         num_workers = num_workers,
         pin_memory = pin_memory,
-        shuffle = False,
+        shuffle = True,
     ) 
 
     return train_loader, val_loader, test_loader
@@ -142,7 +142,7 @@ def etis_larib_loader(batch_size, transforms, num_workers, pin_memory):
         batch_size = batch_size,
         num_workers = num_workers,
         pin_memory = pin_memory,
-        shuffle = True,
+        shuffle = False,
     )
 
     return loader
@@ -166,7 +166,7 @@ def cvc_clinic_loader(batch_size, transforms, num_workers, pin_memory):
         batch_size = batch_size,
         num_workers = num_workers,
         pin_memory = pin_memory,
-        shuffle = True,
+        shuffle = False,
     )
 
     return loader

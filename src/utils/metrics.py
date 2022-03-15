@@ -63,7 +63,7 @@ def dice_coef(pred, target):
 """
 
 
-def dice_coef(preds, labels, EMPTY=1., ignore=None, per_image=True):
+def dice_coef(preds, labels, per_image=True):
     """
     Binary Dice for foreground class
     binary: 1 foreground, 0 background
@@ -74,17 +74,16 @@ def dice_coef(preds, labels, EMPTY=1., ignore=None, per_image=True):
     Returns:
         1D tensor
     """
-
+    smooth = 1.
     if not per_image:
         preds, labels = (preds,), (labels,)
     dices = []
     for pred, label in zip(preds, labels):
         intersection = ((label == 1) & (pred == 1)).sum() # true positive
-
         FP  = ((label==0) & (pred==1)).sum() # false positive
         FN = ((label==1) & (pred==0)).sum() # false negative 
 
-        dice = 2 * float(intersection) / float(FN + FP + 2*intersection) 
+        dice = (2 * float(intersection) + smooth) / float(FN + FP + 2*intersection + smooth) 
         dices.append(dice)
     dice = mean(dices)    # mean accross images if per_image
     return dice

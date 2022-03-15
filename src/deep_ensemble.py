@@ -2,14 +2,11 @@ import torch
 import torch.nn as nn
 import torchvision
 import os
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
 import matplotlib.pyplot as plt
 import numpy as np
 
 # local imports
 from unet import UNet
-from doubleunet import DoubleUNet
 from resunetplusplus import ResUnetPlusPlus
 from utils.dataloader import data_loaders, etis_larib_loader, cvc_clinic_loader
 from utils.utils import save_grid, standard_transforms, get_class_weights
@@ -40,16 +37,13 @@ class DeepEnsemble(nn.Module):
     def forward(self, x):
         inputs = []
         for model in self.model_list:
+            model.eval()
             inputs.append(model(x.clone()))
         outputs = torch.stack(inputs)  # shape – (ensemble_size, b, c, w, h)
 
-        mean = torch.mean(
-            outputs, dim=0
-        ).double()  # element wise mean from output of ensemble models
-        pred = torch.sigmoid(outputs)
-        mean_pred = torch.sigmoid(mean).double()  # only extract class prob
-        variance = torch.mean((pred - mean_pred) ** 2, dim=0).double()
-
+        sigmoided = torch.sigmoid(outputs) # convert to probabilities
+        mean = torch.mean(sigmoided, dim=0) # take mean along stack dimension
+        variance = torch.mean((sigmoided - mean) ** 2, dim=0).double()
         normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))
 
         return mean, normalized_variance
@@ -88,14 +82,16 @@ class ValidateTrainTestEnsemble:
                 y = y.to(device=device).unsqueeze(1)
                 x = x.to(device=device)
                 prob, variance = model(x)
-                pred = torch.sigmoid(prob)
-                pred = (pred > 0.5).float()
+                pred = (prob > 0.5).float()
                 dice += dice_coef(pred, y)
                 iou += iou_score(pred, y)
                 variance = variance.cpu().detach()
+
+                print(variance)
                 
                 torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png")
                 torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
+                torchvision.utils.save_image(x, f"{save_folder}/input_{batch}.png")
                 save_grid(
                     variance.permute(0, 2, 3, 1),
                     f"{save_folder}/heatmap_{batch}.png",
@@ -116,29 +112,29 @@ class ValidateTrainTestEnsemble:
 
         dice_list, NLL_list, DSCL_list = [], [], []
         for i in range(self.ensemble_size):
-            running_dice, running_NLL, running_DSCL = 0, 0, 0 
+            running_dice, running_NLL = 0, 0
             ensemble_model = DeepEnsemble(self.model, i + 1, self.device)
             self.model.eval()
-            for batch, (x, y) in enumerate(self.loader):
-                with torch.no_grad():
+            with torch.no_grad():
+                for batch, (x, y) in enumerate(self.loader):
                     y = y.to(device=self.device).unsqueeze(1)
                     x = x.to(device=self.device)
                     prob, variance = ensemble_model(x)
-                    pred = torch.sigmoid(prob)
-                    pred = (pred > 0.5).float()
+                    pred = (prob > 0.5).float()
                     running_dice += dice_coef(pred, y)
-                    running_NLL += nn.BCEWithLogitsLoss()(prob, y)
+                    running_NLL += nn.BCEWithLogitsLoss()(pred, y)
 
             dice_list.append(running_dice / len(self.loader))
             NLL_list.append(running_NLL / len(self.loader))
 
         plt.figure(figsize=(8, 7))
-        plt.plot(range(1, self.ensemble_size + 1), dice_list, ".-", label="Dice coeff")
-        plt.legend(loc="best")
+        plt.plot(range(1, self.ensemble_size + 1), dice_list, ".-")
+        #plt.plot(range(1, self.ensemble_size + 1), NLL_list, ".-", label="NLL")
+        #plt.legend(loc="best")
         plt.xlabel("Number of networks in ensemble")
-        plt.ylabel("Dice")
+        plt.ylabel("Score")
         plt.title(title)
-        plt.savefig(save_plot_folder + "ensembles_vs_dice.png")
+        plt.savefig(save_plot_folder + "ensembles_vs_score.png")
 
 
 def load_and_test(loader, device):
@@ -162,14 +158,14 @@ def load_and_test(loader, device):
         torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
 
 
-if __name__ == "__main__":
 
-    print("Hello, this is a sanity check! The random number this time is:", torch.randint())
+if __name__ == "__main__":
+    print(f"This is a sanity check, random number is : {torch.rand(1)}")
 
     data = "kvasir"
     
     _, _, kvasir_loader = data_loaders(
-        batch_size=1,
+        batch_size=32,
         train_transforms=standard_transforms(256, 256),
         val_transforms=standard_transforms(256, 256),
         num_workers=4,
@@ -207,14 +203,12 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = UNet(in_channels=3, out_channels=1) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
-    ensemble_size = 12
-
-    load_and_test(kvasir_loader, device)
+    ensemble_size = 16
 
     obj = ValidateTrainTestEnsemble(model, ensemble_size, device, test_loader)
 
     #get_class_weights(test_loader)
 
-    #obj.test_ensembles(save_folder, load_folder)
+    obj.test_ensembles(save_folder, load_folder)
 
-    #obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder, title)
+    obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder, title)
