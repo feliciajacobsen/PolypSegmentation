@@ -74,7 +74,7 @@ def dice_coef(preds, labels, per_image=False):
     Returns:
         1D tensor
     """
-    smooth = 1.
+    smooth = 0.0001
     if not per_image:
         preds, labels = (preds,), (labels,)
     dices = []
@@ -82,10 +82,9 @@ def dice_coef(preds, labels, per_image=False):
         intersection = ((label == 1) & (pred == 1)).sum() # true positive
         FP  = ((label==0) & (pred==1)).sum() # false positive
         FN = ((label==1) & (pred==0)).sum() # false negative 
-
-        dice = (2 * float(intersection) + smooth) / float(FN + FP + 2*intersection + smooth) 
+        dice = (2*float(intersection) + smooth) / (float(FN) + float(FP) + 2*float(intersection) + smooth)
         dices.append(dice)
-    dice = mean(dices)    # mean accross images if per_image
+    dice = mean(dices) # mean accross images if per_image
     return dice
 
 

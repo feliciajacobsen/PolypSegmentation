@@ -27,57 +27,56 @@ class DeepEnsemble(nn.Module):
         variance (tensor): normalized variance tensor of predicted mask of size (B,C,H,W).
     """
 
-    def __init__(self, model, ensemble_size: int, device: str):
-        super(DeepEnsemble, self).__init__()
+    def __init__(self, model, ensemble_size: int, device: str, load_folder: str):
+        super().__init__()
+        self.device = device
 
         self.model_list = []
-        for i in range(ensemble_size):
-            self.model_list.append(model.to(device))
+        for path in os.listdir(load_folder)[:ensemble_size]:
+            checkpoint = torch.load(load_folder + path)
+            model.load_state_dict(checkpoint["state_dict"], strict=False)
+            self.model_list.append(model)
 
     def forward(self, x):
         inputs = []
         for model in self.model_list:
+            model.to(self.device)
+            for param in model.parameters():
+                    param.requires_grad_(False)                  
             model.eval() 
             inputs.append(model(x))
-            for param in model.parameters():
-                param.requires_grad_(False)
 
-        outputs = torch.stack(inputs)  # shape – (ensemble_size, b, c, w, h)
+        outputs = torch.stack(inputs)  # shape = (ensemble_size, b, c, w, h)
         sigmoided = torch.sigmoid(outputs) # convert to probabilities
         mean = torch.mean(sigmoided, dim=0) # take mean along stack dimension
-        variance = torch.mean((sigmoided - mean) ** 2, dim=0).double()
+        variance = torch.var(sigmoided, dim=0).double() #torch.mean((sigmoided - mean) ** 2, dim=0).double()
         normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))
 
         return mean, variance
 
 
 class ValidateTrainTestEnsemble:
-    def __init__(self, model, ensemble_size, device, loader):
+    def __init__(self, model, ensemble_size, device, loader, load_folder):
         self.model = model
         self.ensemble_size = ensemble_size
         self.device = device
         self.loader = loader
-        self.ensemble = DeepEnsemble(self.model, self.ensemble_size, self.device)
+        self.load_folder = load_folder
+        self.ensemble = DeepEnsemble(self.model, self.ensemble_size, self.device, self.load_folder)
 
     def get_dice_iou(self, loader):
         pass
 
-    def test_ensembles(self, save_folder, load_folder):
+    def test_ensembles(self, save_folder):
         """
         Function loads trained models and make prediction on data from loader.
-
         """
-
-        # load models from where they are saved
-        for path in os.listdir(load_folder)[:ensemble_size]:
-            checkpoint = torch.load(load_folder + path)
-            self.model.load_state_dict(checkpoint["state_dict"], strict=False)
-
+ 
         dice, iou = 0, 0
         with torch.no_grad():
             for batch, (x, y) in enumerate(self.loader):
-                y = y.to(device=device).unsqueeze(1)
-                x = x.to(device=device)
+                y = y.to(device=self.device).unsqueeze(1)
+                x = x.to(device=self.device)
                 prob, variance = self.ensemble(x)
                 pred = (prob > 0.5).float()
                 dice += dice_coef(pred, y)
@@ -85,29 +84,26 @@ class ValidateTrainTestEnsemble:
                 variance = variance.cpu().detach()
 
                 # save images to save_folder
-                torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png")
-                torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
-                torchvision.utils.save_image(x, f"{save_folder}/input_{batch}.png")
+                torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png", nrow=5)
+                torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png", nrow=5)
+                torchvision.utils.save_image(x, f"{save_folder}/input_{batch}.png", nrow=5)
                 save_grid(
                     variance.permute(0, 2, 3, 1),
                     f"{save_folder}/heatmap_{batch}.png",
-                    rows=4,
-                    cols=8,
+                    rows=5,
+                    cols=5,
                 )
         print(f"IoU score: {iou/len(self.loader)}")
         print(f"Dice score: {dice/len(self.loader)}")
 
 
-    def plot_dice_vs_ensemble_size(self, save_plot_folder, load_folder, title):
-        paths = os.listdir(load_folder)[: self.ensemble_size]
-        for path in paths:
-            checkpoint = torch.load(load_folder + path)
-            self.model.load_state_dict(checkpoint["state_dict"], strict=False)
-
+    def plot_dice_vs_ensemble_size(self, save_plot_folder, title):
+        
         dice_list = []
         for i in range(self.ensemble_size):
+            print(f" Ensemble size: {i+1} ".center(50, "-"))
             running_dice, running_NLL = 0, 0
-            ensemble_model = DeepEnsemble(self.model, i + 1, self.device)
+            ensemble_model = DeepEnsemble(self.model, i + 1, self.device, self.load_folder)
             self.model.eval()
             with torch.no_grad():
                 for batch, (x, y) in enumerate(self.loader):
@@ -115,8 +111,12 @@ class ValidateTrainTestEnsemble:
                     x = x.to(device=self.device)
                     prob, variance = ensemble_model(x)
                     pred = (prob > 0.5).float()
-                    running_dice += dice_coef(pred, y)
-            dice_list.append(running_dice / len(self.loader))
+                    dice = dice_coef(pred, y)
+                    print(dice, end=", ")
+                    running_dice += dice
+            average_dice = running_dice / len(self.loader)
+            print("average dice:", average_dice)
+            dice_list.append(average_dice)
 
         plt.figure(figsize=(8, 7))
         plt.plot(range(1, self.ensemble_size + 1), dice_list, ".-")
@@ -155,7 +155,7 @@ if __name__ == "__main__":
     data = "kvasir"
     
     _, _, kvasir_loader = data_loaders(
-        batch_size=32,
+        batch_size=25,
         train_transforms=standard_transforms(256, 256),
         val_transforms=standard_transforms(256, 256),
         num_workers=4,
@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
     
     etis_loader = etis_larib_loader(
-            batch_size=32,
+            batch_size=25,
             transforms=standard_transforms(256, 256),
             num_workers=4,
             pin_memory=True,
@@ -192,18 +192,16 @@ if __name__ == "__main__":
         #test_loader = cvc_loader
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = UNet(in_channels=3, out_channels=1) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
-    ensemble_size = 2
+    model = UNet(in_channels=3, out_channels=1).to(device) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
+    ensemble_size = 16
 
-    load_and_test(test_loader, device)
+    #load_and_test(test_loader, device)
 
-    """
-
-    obj = ValidateTrainTestEnsemble(model, ensemble_size, device, test_loader)
+    obj = ValidateTrainTestEnsemble(model, ensemble_size, device, test_loader, load_folder)
 
     #get_class_weights(test_loader)
 
-    obj.test_ensembles(save_folder, load_folder)
+    obj.test_ensembles(save_folder)
 
-    obj.plot_dice_vs_ensemble_size(save_plot_folder, load_folder, title)
-    """
+    obj.plot_dice_vs_ensemble_size(save_plot_folder, title)
+    
