@@ -30,22 +30,19 @@ class DeepEnsemble(nn.Module):
     def __init__(self, model, ensemble_size: int, device: str, load_folder: str):
         super().__init__()
         self.device = device
-
-        self.model_list, self.loaded_model_list = [], []
-        for i, path in enumerate(os.listdir(load_folder)[:ensemble_size]):
-            self.model_list.append(model)
-            checkpoint = torch.load(load_folder + path)
-            self.model_list[i].load_state_dict(checkpoint["state_dict"])
-            self.loaded_model_list.append(self.model_list[i])
+        self.load_folder = load_folder
+        self.ensemble_size = ensemble_size
+        self.model = model
 
     def forward(self, x):
         inputs = []
-        for model in self.loaded_model_list:
-            model.to(self.device)
-            model.eval()   
-            for param in model.parameters():
+        for path in os.listdir(self.load_folder)[:ensemble_size]:
+            checkpoint = torch.load(self.load_folder + path, map_location=self.device)
+            self.model.load_state_dict(checkpoint["state_dict"])
+            self.model.eval()   
+            for param in self.model.parameters():
                     param.requires_grad_(False)       
-            inputs.append(model(x))
+            inputs.append(self.model(x))
 
         outputs = torch.stack(inputs)  # shape = (ensemble_size, b, c, w, h)
         sigmoided = torch.sigmoid(outputs) # convert to probabilities
