@@ -31,19 +31,20 @@ class DeepEnsemble(nn.Module):
         super().__init__()
         self.device = device
 
-        self.model_list = []
-        for path in os.listdir(load_folder)[:ensemble_size]:
-            checkpoint = torch.load(load_folder + path)
-            model.load_state_dict(checkpoint["state_dict"], strict=False)
+        self.model_list, self.loaded_model_list = [], []
+        for i, path in enumerate(os.listdir(load_folder)[:ensemble_size]):
             self.model_list.append(model)
+            checkpoint = torch.load(load_folder + path)
+            self.model_list[i].load_state_dict(checkpoint["state_dict"])
+            self.loaded_model_list.append(self.model_list[i])
 
     def forward(self, x):
         inputs = []
-        for model in self.model_list:
+        for model in self.loaded_model_list:
             model.to(self.device)
+            model.eval()   
             for param in model.parameters():
-                    param.requires_grad_(False)                  
-            model.eval() 
+                    param.requires_grad_(False)       
             inputs.append(model(x))
 
         outputs = torch.stack(inputs)  # shape = (ensemble_size, b, c, w, h)
@@ -98,7 +99,6 @@ class ValidateTrainTestEnsemble:
 
 
     def plot_dice_vs_ensemble_size(self, save_plot_folder, title):
-        
         dice_list = []
         for i in range(self.ensemble_size):
             print(f" Ensemble size: {i+1} ".center(50, "-"))
@@ -162,7 +162,6 @@ if __name__ == "__main__":
         pin_memory=True,
     )
 
-    
     etis_loader = etis_larib_loader(
             batch_size=25,
             transforms=standard_transforms(256, 256),
