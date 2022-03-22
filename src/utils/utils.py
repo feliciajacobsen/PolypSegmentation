@@ -161,7 +161,7 @@ def save_grid(ims, folder, rows=None, cols=None):
     #fig.subplots_adjust(wspace=0, hspace=0)
 
     for ax,im in zip(axarr.ravel(), ims):
-        img = ax.imshow(im, cmap="jet", vmin=im.min(), vmax=im.max())
+        img = ax.imshow(im, cmap="turbo", vmin=im.min(), vmax=im.max())
         ax.set_axis_off()
         ax.set_aspect("equal") 
         fig.subplots_adjust(right=0.8)

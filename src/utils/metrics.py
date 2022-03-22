@@ -24,43 +24,24 @@ class BCEDiceLoss(nn.Module):
         bce_loss = nn.BCEWithLogitsLoss()(pred, truth).double() 
 
         # Dice Loss
-        dice_coef = dice_coef = dice_coef(pred, truth).double()
+        dice = dice_coef(pred, truth)
 
-        return bce_loss + (1 - dice_coef)
+        return bce_loss + (1 - dice)
 
 
 class DiceLoss(nn.Module):
-    def __init__(self, weight=None):
+    def __init__(self):
         super().__init__()
 
-    def forward(self, input, target):
-        pred = torch.sigmoid(input).view(-1)
-        truth = target.view(-1)
+    def forward(self, input, target, eps=1e-8):
+        pred = torch.sigmoid(input)
 
-        dice_coef = dice_coef(pred, truth).double()
+        intersection = (pred*target).flatten(1).sum(1)
+        total = pred.flatten(1).sum(1) + target.flatten(1).sum(1)
 
-        return 1 - dice_coef
+        dice = (2.0 * intersection + eps) / (total + intersection + eps)
 
-
-"""
-class DiceLoss(nn.Module):
-    def __init__(self, weight=None):
-        super().__init__()
-    
-    def forward(self, input, target):
-        assert input.shape[0] == target.shape[0], "Prediction and GT batch size do not match"
-        pred = torch.sigmoid(input).view(-1) # view(-1) flattens tensor
-        truth = target.view(-1)
-        
-        return (1 - dice_coef(pred, truth))
-
-def dice_coef(pred, target):
-
-    intersection = (pred*target).sum()
-    total = pred.sum() + target.sum()
-
-    return (2.0 * intersection + 1) / (total + intersection + 1)
-"""
+        return 1 - torch.mean(dice, dim=0)
 
 
 def dice_coef(preds, labels, per_image=False):
@@ -75,8 +56,10 @@ def dice_coef(preds, labels, per_image=False):
         1D tensor
     """
     smooth = 0.0001
+    
     if not per_image:
         preds, labels = (preds,), (labels,)
+      
     dices = []
     for pred, label in zip(preds, labels):
         intersection = ((label == 1) & (pred == 1)).sum() # true positive

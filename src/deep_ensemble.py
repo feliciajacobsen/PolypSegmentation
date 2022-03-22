@@ -97,12 +97,11 @@ class ValidateTrainTestEnsemble:
 
     def plot_dice_vs_ensemble_size(self, save_plot_folder, title):
         dice_list = []
-        for i in range(self.ensemble_size):
-            print(f" Ensemble size: {i+1} ".center(50, "-"))
-            running_dice, running_NLL = 0, 0
-            ensemble_model = DeepEnsemble(self.model, i + 1, self.device, self.load_folder)
-            self.model.eval()
-            with torch.no_grad():
+        with torch.no_grad():
+            for i in range(self.ensemble_size):
+                print(f" Ensemble size: {i+1} ".center(50, "-"))
+                running_dice, running_NLL = 0, 0
+                ensemble_model = DeepEnsemble(self.model, i + 1, self.device, self.load_folder)
                 for batch, (x, y) in enumerate(self.loader):
                     y = y.to(device=self.device).unsqueeze(1)
                     x = x.to(device=self.device)
@@ -111,9 +110,11 @@ class ValidateTrainTestEnsemble:
                     dice = dice_coef(pred, y)
                     print(dice, end=", ")
                     running_dice += dice
-            average_dice = running_dice / len(self.loader)
-            print("average dice:", average_dice)
-            dice_list.append(average_dice)
+
+                average_dice = running_dice / len(self.loader)
+                print("average dice:", average_dice)
+                dice_list.append(average_dice)
+                print(dice_list)
 
         plt.figure(figsize=(8, 7))
         plt.plot(range(1, self.ensemble_size + 1), dice_list, ".-")
@@ -122,28 +123,6 @@ class ValidateTrainTestEnsemble:
         plt.ylabel("Score")
         plt.title(title)
         plt.savefig(save_plot_folder + "ensembles_vs_score.png")
-
-
-def load_and_test(loader, device):
-    model = UNet(in_channels=3, out_channels=1)
-    model.to(device=device)
-    save_folder = "/home/feliciaj/PolypSegmentation/results/results_kvasir/examples1/"
-    checkpoint = torch.load("/home/feliciaj/PolypSegmentation/saved_models/unet_BCE/unet_0.pt")
-    model.load_state_dict(checkpoint["state_dict"])
-    model.eval()
-    for batch, (x, y) in enumerate(loader):
-        with torch.no_grad():
-            y = y.to(device).unsqueeze(1)
-            x = x.to(device)
-            prob = model(x)
-            pred = torch.sigmoid(prob)
-            pred = (pred > 0.5).float()
-            dice = dice_coef(pred, y)
-            print(f"For image no. {batch}, dice={dice}")
-
-        torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png")
-        torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png")
-
 
 
 if __name__ == "__main__":
@@ -191,13 +170,11 @@ if __name__ == "__main__":
     model = UNet(in_channels=3, out_channels=1).to(device) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
     ensemble_size = 16
 
-    #load_and_test(test_loader, device)
-
     obj = ValidateTrainTestEnsemble(model, ensemble_size, device, test_loader, load_folder)
 
-    #get_class_weights(test_loader)
-
-    obj.test_ensembles(save_folder)
+    #obj.test_ensembles(save_folder)
 
     obj.plot_dice_vs_ensemble_size(save_plot_folder, title)
+    
+
     
