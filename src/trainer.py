@@ -162,10 +162,10 @@ def run_model(number):
     config["num_workers"] = 4
     config["image_height"] = 256
     config["image_width"] = 256
-    config["model_name"] = "resunet++"
+    config["model_name"] = "unet"
     config["save_folder"] = (
         "/home/feliciaj/PolypSegmentation/saved_models/"
-        + config["model_name"] #+ "_BCE/"
+        + config["model_name"] + "/" #+ "_BCE/"
     )
 
     if config["model_name"] == "unet":
@@ -197,7 +197,7 @@ def run_model(number):
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
 
     #criterion = nn.BCEWithLogitsLoss()  #  Sigmoid layer and the BCELoss
-    # criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
+    #criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
     criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])

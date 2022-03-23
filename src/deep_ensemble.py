@@ -27,7 +27,7 @@ class DeepEnsemble(nn.Module):
         variance (tensor): normalized variance tensor of predicted mask of size (B,C,H,W).
     """
 
-    def __init__(self, model, ensemble_size: int, device: str, load_folder: str):
+    def __init__(self, model, ensemble_size, device: str, load_folder: str):
         super().__init__()
         self.device = device
         self.load_folder = load_folder
@@ -50,82 +50,117 @@ class DeepEnsemble(nn.Module):
         variance = torch.var(sigmoided, dim=0).double() #torch.mean((sigmoided - mean) ** 2, dim=0).double()
         normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))
 
-        return mean, variance
+        return mean, normalized_variance
 
 
-class ValidateTrainTestEnsemble:
-    def __init__(self, model, ensemble_size, device, loader, load_folder):
-        self.model = model
-        self.ensemble_size = ensemble_size
-        self.device = device
-        self.loader = loader
-        self.load_folder = load_folder
-        self.ensemble = DeepEnsemble(self.model, self.ensemble_size, self.device, self.load_folder)
+def test_ensembles(ensemble, device, loader, save_folder: str):
+    """
+    Function loads trained models and make prediction on data from loader.
+    """
 
-    def get_dice_iou(self, loader):
-        pass
+    dice, iou = 0, 0
+    with torch.no_grad():
+        for batch, (x, y) in enumerate(loader):
+            y = y.to(device=device).unsqueeze(1)
+            x = x.to(device=device)
+            prob, variance = ensemble(x)
+            pred = (prob > 0.5).float()
+            dice += dice_coef(pred, y)
+            iou += iou_score(pred, y)
+            variance = variance.cpu().detach()
 
-    def test_ensembles(self, save_folder):
-        """
-        Function loads trained models and make prediction on data from loader.
-        """
- 
-        dice, iou = 0, 0
-        with torch.no_grad():
-            for batch, (x, y) in enumerate(self.loader):
-                y = y.to(device=self.device).unsqueeze(1)
-                x = x.to(device=self.device)
-                prob, variance = self.ensemble(x)
+            # save images to save_folder
+            torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png", nrow=5)
+            torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png", nrow=5)
+            torchvision.utils.save_image(x, f"{save_folder}/input_{batch}.png", nrow=5)
+            save_grid(
+                variance.permute(0, 2, 3, 1),
+                f"{save_folder}/heatmap_{batch}.png",
+                rows=5,
+                cols=5,
+            )
+    print(f"IoU score: {iou/len(loader)}")
+    print(f"Dice score: {dice/len(loader)}")
+
+
+def plot_dice_vs_ensemble_size(
+    model, 
+    ensemble_size, 
+    device, 
+    load_folder, 
+    save_plot_folder, 
+    filename
+    ):
+    dice_list = []
+    with torch.no_grad():
+        for i in range(ensemble_size):
+            print(f" Ensemble size: {i+1} ".center(50, "-"))
+            running_dice, running_NLL = 0, 0
+            ensemble_model = DeepEnsemble(model, i + 1, device, load_folder)
+            for batch, (x, y) in enumerate(loader):
+                y = y.to(device).unsqueeze(1)
+                x = x.to(device)
+                prob, variance = ensemble_model(x)
                 pred = (prob > 0.5).float()
-                dice += dice_coef(pred, y)
-                iou += iou_score(pred, y)
-                variance = variance.cpu().detach()
+                dice = dice_coef(pred, y)
+                print(dice, end=", ")
+                running_dice += dice
 
-                # save images to save_folder
-                torchvision.utils.save_image(pred, f"{save_folder}/pred_{batch}.png", nrow=5)
-                torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png", nrow=5)
-                torchvision.utils.save_image(x, f"{save_folder}/input_{batch}.png", nrow=5)
-                save_grid(
-                    variance.permute(0, 2, 3, 1),
-                    f"{save_folder}/heatmap_{batch}.png",
-                    rows=5,
-                    cols=5,
-                )
-        print(f"IoU score: {iou/len(self.loader)}")
-        print(f"Dice score: {dice/len(self.loader)}")
+            average_dice = running_dice / len(loader)
+            print("average dice:", average_dice)
+            dice_list.append(average_dice)
+            print(dice_list)
 
-
-    def plot_dice_vs_ensemble_size(self, save_plot_folder, title):
-        dice_list = []
-        with torch.no_grad():
-            for i in range(self.ensemble_size):
-                print(f" Ensemble size: {i+1} ".center(50, "-"))
-                running_dice, running_NLL = 0, 0
-                ensemble_model = DeepEnsemble(self.model, i + 1, self.device, self.load_folder)
-                for batch, (x, y) in enumerate(self.loader):
-                    y = y.to(device=self.device).unsqueeze(1)
-                    x = x.to(device=self.device)
-                    prob, variance = ensemble_model(x)
-                    pred = (prob > 0.5).float()
-                    dice = dice_coef(pred, y)
-                    print(dice, end=", ")
-                    running_dice += dice
-
-                average_dice = running_dice / len(self.loader)
-                print("average dice:", average_dice)
-                dice_list.append(average_dice)
-                print(dice_list)
-
-        plt.figure(figsize=(8, 7))
-        plt.plot(range(1, self.ensemble_size + 1), dice_list, ".-")
-        #plt.legend(loc="best")
-        plt.xlabel("Number of networks in ensemble")
-        plt.ylabel("Score")
-        plt.title(title)
-        plt.savefig(save_plot_folder + "ensembles_vs_score.png")
+    plt.figure(figsize=(8, 7))
+    plt.plot(range(1, ensemble_size + 1), dice_list, ".-")
+    #plt.legend(loc="best")
+    plt.xlabel("Number of networks in ensemble")
+    plt.ylabel("Score")
+    plt.title(title)
+    plt.savefig(save_plot_folder + filename+ ".png")
 
 
-if __name__ == "__main__":
+def get_dice(ensemble_size, model, loader, device, load_folder):
+    ensemble = DeepEnsemble(
+        model=model, 
+        ensemble_size=ensemble_size, 
+        device=device, 
+        load_folder=load_folder
+    )
+    dice = 0
+    with torch.no_grad():
+        for batch, (x, y) in enumerate(loader):
+            y = y.to(device).unsqueeze(1)
+            x = x.to(device)
+            prob, variance = ensemble(x)
+            pred = (prob > 0.5).float()
+            dice += dice_coef(pred, y)
+
+    return dice/len(loader)
+    
+
+def plot(ensemble_size, model, loader, device, load_folder, save_plot_folder):
+    dice_per_ensemble = []
+    for i in range(1, ensemble_size+1):
+        dice = get_dice(
+            ensemble_size=i, 
+            model=model, 
+            loader=loader, 
+            device=device, 
+            load_folder=load_folder
+        )
+        dice_per_ensemble.append(dice)
+    print(dice_per_ensemble)
+    plt.figure(figsize=(8, 7))
+    plt.plot(range(1, ensemble_size+1), dice_per_ensemble, ".-")
+    plt.xlabel("Number of networks in ensemble")
+    plt.ylabel("Score")
+    plt.savefig(save_plot_folder + "ok.png")
+
+
+
+
+def run_ensembles(number):
     print(f"This is a sanity check, random number is : {torch.rand(1)}")
 
     data = "kvasir"
@@ -168,13 +203,15 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = UNet(in_channels=3, out_channels=1).to(device) #ResUnetPlusPlus(in_channels=3, out_channels=1)  
-    ensemble_size = 16
+    ensemble_size = number
 
-    obj = ValidateTrainTestEnsemble(model, ensemble_size, device, test_loader, load_folder)
+    dice = get_dice(ensemble_size, model, test_loader, device, load_folder)
+    print(dice)
 
-    #obj.test_ensembles(save_folder)
 
-    obj.plot_dice_vs_ensemble_size(save_plot_folder, title)
-    
 
-    
+
+
+if __name__ == "__main__":
+    number = int(sys.argv[1])
+    run_ensembles(number) 
