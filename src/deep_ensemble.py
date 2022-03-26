@@ -144,16 +144,37 @@ def dice_list():
         0.8171624245168824
     ]
 
-    return unet_BCE, unet_dice
+    resunet++_dice = [
+        0.6953401563935416,
+        0.7108269197580678,
+        0.7215404303833568,
+        0.7336649727418734,
+        0.729759778933403,
+        0.7307517664564741,
+        0.7323681972426732,
+        0.7375512516553291,
+        0.7402523873031486,
+        0.7364699345017984,
+        0.7382709407606038,
+        0.7425531671662954,
+        0.7454024692650959,
+        0.745000043328777,
+        0.7431514971522293,
+        0.7434531716286275
+    ]
+
+    return unet_BCE, unet_dice, resunet++_dice
 
 def plot_ensembles_vs_score(save_plot_folder, filename, title):
-    unet_BCE, unet_dice = dice_list()
+    unet_bce, unet_dice, resunet++_dice = dice_list()
     plt.figure(figsize=(8, 7))
-    plt.plot(range(1,  len(unet_bce)+1), unet_bce, ".-", label="U-Net trained with DSC")
-    plt.plot(range(1,  len(unet_dice)+1), unet_dice, ".-", label="U-Net trained with BCE")
+    plt.plot(range(1,  len(unet_bce)+1), unet_bce, ".-", label="U-Net trained with BCE")
+    plt.plot(range(1,  len(unet_dice)+1), unet_dice, "r.-", label="U-Net trained with DSC")
     plt.legend(loc="best")
+    plt.grid()
+    plt.xticks(range(1,  len(unet_bce)+1))
     plt.xlabel("Ensemble size")
-    plt.ylabel("Dise similarity coefficient")
+    plt.ylabel("Dice similarity coefficient")
     plt.title(title)
     plt.savefig(save_plot_folder + filename + ".png")
 
@@ -181,42 +202,39 @@ def run_ensembles(number):
     )
 
     main_root = "/home/feliciaj/PolypSegmentation"
-    load_folder = main_root + "/saved_models/unet_dice/"
+    load_folder = main_root + "/saved_models/resunet++_dice/"
 
     if data == "etis":
-        save_folder = main_root + "/results/results_etis/ensembles_unet_Dice/"
+        save_folder = main_root + "/results/results_etis/ensembles_resunet++_Dice/"
         save_plot_folder = main_root + "/results/results_etis/plots/ensembles/"
         test_loader = etis_loader
 
     elif data == "kvasir":
-        save_folder = main_root + "/results/results_kvasir/ensembles_unet_Dice/"
+        save_folder = main_root + "/results/results_kvasir/ensembles_resunet++_Dice/"
         save_plot_folder = main_root + "/results/results_kvasir/plots/ensembles/"
         test_loader = kvasir_loader
 
     else:
         save_folder = main_root + "/results/results_cvc/ensembles_unet_BCE/"
         save_plot_folder = main_root + "/results/results_cvc/plots/ensembles/"
-    
         # test_loader = cvc_loader
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = UNet(in_channels=3, out_channels=1).to(
-        device
-    )  # ResUnetPlusPlus(in_channels=3, out_channels=1)
+    model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  #UNet(in_channels=3, out_channels=1).to(device) 
     ensemble_size = number
     ensemble = DeepEnsemble(model, ensemble_size, device, load_folder)
     test_ensembles(ensemble, device, test_loader, save_folder)
 
-    #dice = get_dice(ensemble_size, model, test_loader, device, load_folder)
-    #print(f"Dice={dice}, ensemble size={number}")
+    dice = get_dice(ensemble_size, model, test_loader, device, load_folder)
+    print(f"Dice={dice}, ensemble size={number}")
 
     filename = "unet_ensembles_vs_score"
     title = "Deep Ensemble of U-Nets tested on Kvasir-SEG"
 
-    plot_ensembles_vs_score(save_plot_folder, filename, title)
+    #plot_ensembles_vs_score(save_plot_folder, filename, title)
 
 
 
 if __name__ == "__main__":
-    number = 16#int(sys.argv[1])
+    number = int(sys.argv[1])
     run_ensembles(number)
