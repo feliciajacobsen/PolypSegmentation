@@ -144,7 +144,7 @@ def dice_list():
         0.8171624245168824
     ]
 
-    resunet++_dice = [
+    resunetplusplus_dice = [
         0.6953401563935416,
         0.7108269197580678,
         0.7215404303833568,
@@ -163,15 +163,17 @@ def dice_list():
         0.7434531716286275
     ]
 
-    return unet_BCE, unet_dice, resunet++_dice
+    return unet_BCE, unet_dice, resunetplusplus_dice
+
 
 def plot_ensembles_vs_score(save_plot_folder, filename, title):
-    unet_bce, unet_dice, resunet++_dice = dice_list()
+    unet_bce, unet_dice, resunetplusplus_dice = dice_list()
     plt.figure(figsize=(8, 7))
     plt.plot(range(1,  len(unet_bce)+1), unet_bce, ".-", label="U-Net trained with BCE")
     plt.plot(range(1,  len(unet_dice)+1), unet_dice, "r.-", label="U-Net trained with DSC")
+    plt.plot(range(1,  len(resunetplusplus_dice)+1), resunetplusplus_dice, "g.-", label="ResUnet++ trained with DSC")
     plt.legend(loc="best")
-    plt.grid()
+    plt.grid(ls="dashed", alpha=0.7)
     plt.xticks(range(1,  len(unet_bce)+1))
     plt.xlabel("Ensemble size")
     plt.ylabel("Dice similarity coefficient")
@@ -231,7 +233,7 @@ def run_ensembles(number):
     filename = "unet_ensembles_vs_score"
     title = "Deep Ensemble of U-Nets tested on Kvasir-SEG"
 
-    #plot_ensembles_vs_score(save_plot_folder, filename, title)
+    plot_ensembles_vs_score(save_plot_folder, filename, title)
 
 
 

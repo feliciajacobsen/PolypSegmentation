@@ -142,7 +142,7 @@ class UNet(nn.Module):
 
 
 class UNet_dropout(nn.Module):
-    def __init__(self, in_channels, out_channels, droprate):
+    def __init__(self, in_channels, out_channels, droprate=0.1):
         super(UNet_dropout, self).__init__()
         """
         Credit : https://github.com/milesial/Pytorch-UNet/blob/master/unet/unet_model.py

@@ -62,7 +62,7 @@ def train_model(loader, model, device, optimizer, criterion):
 
         # backprop
         optimizer.zero_grad()  # zero out previous gradients
-        scaler.scale(loss).backward()  # scale loss before backprop
+        scaler.scale(loss).backward()  # scale loss in backprop
         scaler.step(optimizer)  # update gradients
         scaler.update()  # update scale factor
 
