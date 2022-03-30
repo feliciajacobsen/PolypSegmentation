@@ -7,20 +7,26 @@ from torch.autograd import Variable
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import matplotlib.pyplot as plt
-import numpy as np
 from tqdm import tqdm
 
 # import models
 from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
 from unet import UNet_dropout, UNet
-
 # from unet_vajira import UNet_dropout
 
-# import from utils subfolder
+# local imports
 from utils.dataloader import data_loaders
-from utils.utils import check_scores, save_grid, standard_transforms
-from utils.metrics import dice_coef, iou_score, DiceLoss
+from utils.utils import (
+    check_scores, 
+    save_grid, 
+    standard_transforms
+)
+from utils.metrics import (
+    dice_coef, 
+    iou_score, 
+    DiceLoss
+)
 
 
 class MCD(nn.Module):
@@ -130,12 +136,13 @@ class MCDropoutSegmentation:
             plt.savefig(save_plot_path + f"{fig_name}.png")
 
 
-def save_images(batch, mean, variance, truth, img_folder):
+def save_images(batch, input, mean, variance, truth, img_folder):
     """
     Function saves images from the same batch in a grid.
     """
     torchvision.utils.save_image(mean, f"{img_folder}/pred_{batch}.png", nrow=5)
     torchvision.utils.save_image(truth, f"{img_folder}/mask_{batch}.png", nrow=5)
+    torchvision.utils.save_image(input, f"{img_folder}/input_{batch}.png", nrow=5)
     save_grid(
         variance.permute(0, 2, 3, 1),
         f"{img_folder}/heatmap_{batch}.png",
@@ -154,16 +161,12 @@ def test_MC_dropout(model, forward_passes, loader, device, load_folder, img_fold
         var = var.cpu().detach()
         pred = (prob > 0.5).float()
         dice += dice_coef(pred, y)
-        save_images(batch, pred, var, y, img_folder)
-    print(f"{dice/len(test_loader)}")
+        save_images(batch, x, pred, var, y, img_folder)
+    mean_dice = dice/len(test_loader)  
+    print(f"Dice={mean_dice} for N={forward_passes} forward passes")
 
 
-def plot_dropout_vs_forward_passes(dice_list, iou_list, save_plot_path):
-    assert len(dice_list) == len(
-        iou_list
-    ), "Error: Dice coeff list does not match IoU score list!"
-
-    forward_passes = len(dice_list)
+def plot_models_vs_dice(model, N, loader, device, load_folder, save_plot_path):
     plt.figure(figsize=(8, 7))
     plt.plot(range(1, forward_passes + 1), dice_list, ".-", label="Dice coeff")
     plt.plot(range(1, forward_passes + 1), iou_list, ".-", label="IoU")
@@ -234,7 +237,7 @@ if __name__ == "__main__":
     #obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/unet")
 
     _, _, test_loader = loaders
-    forward_passes = 5
+    forward_passes = 16
     model = UNet_dropout(3, 1).to(device)
     load_folder = load_path
     test_MC_dropout(model, forward_passes, test_loader, device, load_folder, img_folder)

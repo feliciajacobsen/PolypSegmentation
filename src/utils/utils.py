@@ -186,6 +186,7 @@ def standard_transforms(height, width):
     return transforms
 
 
+
 if __name__ == "__main__":
     val_transforms = A.Compose([A.Resize(height=240, width=240), A.Normalize(mean=[0,0,0],std=[1.0,1.0,1.0],max_pixel_value=255.0),ToTensorV2()])
     # training dataset is 80 percent of total dataset
