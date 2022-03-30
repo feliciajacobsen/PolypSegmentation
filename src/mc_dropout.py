@@ -166,22 +166,37 @@ def test_MC_dropout(model, forward_passes, loader, device, load_folder, img_fold
     print(f"Dice={mean_dice} for N={forward_passes} forward passes")
 
 
-def plot_models_vs_dice(model, N, loader, device, load_folder, save_plot_path):
+def plot_models_vs_dice(model, forward_passes, loader, device, load_folder, save_plot_path):
+
+    dice = []
+    for passes in range(1, forward_passes+1):
+        running_dice = 0
+        for batch, (x, y) in enumerate(loader):
+            x = x.to(device)
+            y = y.to(device).unsqueeze(1)
+            ensemble = MCD(model, forward_passes, device, load_folder)
+            prob, var = ensemble(x)
+            var = var.cpu().detach()
+            pred = (prob > 0.5).float()
+            running_dice += dice_coef(pred, y)
+        dice.append(running_dice/len(loader))
+
     plt.figure(figsize=(8, 7))
-    plt.plot(range(1, forward_passes + 1), dice_list, ".-", label="Dice coeff")
-    plt.plot(range(1, forward_passes + 1), iou_list, ".-", label="IoU")
+    plt.plot(range(1, forward_passes + 1), dice, ".-", label="Dice coeff")
     plt.legend(loc="best")
+    plt.grid(ls="dashed", alpha=0.7)
+    plt.xticks(range(1,  forward_passes + 1))
     plt.xlabel("Number of forward passes")
     plt.ylabel("Score")
     plt.title(
-        f"Dice and IoU scores with MC droput with {forward_passes} number of U-Nets"
+        f"MC droput with {forward_passes} number of U-Nets on Kvasir-SEG"
     )
     plt.savefig(save_plot_path + f"unet_dropout_{forward_passes}_models.png")
 
 
 if __name__ == "__main__":
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout_vajira/"
-    save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
+    save_plot_path = "/home/feliciaj/PolypSegmentation/results/results_kvasir/plots/MC_dropout/"
     max_epoch = 150
     rates = [0, 0.1, 0.2]
 
@@ -228,7 +243,6 @@ if __name__ == "__main__":
     )
 
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
-    save_plot_path = "/home/feliciaj/PolypSegmentation/results/figures/"
     rates = [0, 0.1, 0.3, 0.5]
     fig_name = (
         f"U-Net with dropout predicted on Kvasir-SEG validation data with rates={rates}"
@@ -240,6 +254,7 @@ if __name__ == "__main__":
     forward_passes = 16
     model = UNet_dropout(3, 1).to(device)
     load_folder = load_path
+
     test_MC_dropout(model, forward_passes, test_loader, device, load_folder, img_folder)
 
-    
+    plot_models_vs_dice(model, forward_passes, test_loader, device, load_folder, save_plot_path)
