@@ -8,8 +8,7 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 
 # Local imports
-from unet_vajira import UNet_dropout
-from unet import UNet  # , UNet_dropout
+from unet import UNet, UNet_dropout
 from resunetplusplus import ResUnetPlusPlus
 from doubleunet import DoubleUNet
 from utils.dataloader import data_loaders
@@ -162,10 +161,10 @@ def run_model(number):
     config["num_workers"] = 4
     config["image_height"] = 256
     config["image_width"] = 256
-    config["model_name"] = "unet"
+    config["model_name"] = "unet_dropout"
     config["save_folder"] = (
         "/home/feliciaj/PolypSegmentation/saved_models/"
-        + config["model_name"] + "/" #+ "_BCE/"
+        + config["model_name"] + "_BCE/"
     )
 
     if config["model_name"] == "unet":
@@ -176,6 +175,8 @@ def run_model(number):
         model = ResUnetPlusPlus(config["in_channels"], config["numcl"]).to(
             config["device"]
         )
+    elif config["model_name"] == "unet_dropout":
+        model = UNet_dropout(config["in_channels"], config["numcl"]).to(config["device"])
     else:
         print("ERROR: Model not found!")
 
@@ -196,9 +197,9 @@ def run_model(number):
 
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
 
-    #criterion = nn.BCEWithLogitsLoss()  #  Sigmoid layer and the BCELoss
+    criterion = nn.BCEWithLogitsLoss()  #  Sigmoid layer and the BCELoss
     #criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
-    criterion = DiceLoss()  # Sigmoid layer and Dice loss
+    #criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
 
@@ -238,5 +239,5 @@ def run_model(number):
 
 
 if __name__ == "__main__":
-    number = int(sys.argv[1])
+    number = 1 #int(sys.argv[1])
     run_model(number)

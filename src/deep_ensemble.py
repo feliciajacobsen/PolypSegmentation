@@ -30,10 +30,10 @@ class DeepEnsemble(nn.Module):
 
     def __init__(self, model, ensemble_size, device: str, load_folder: str):
         super().__init__()
+        self.model = model
+        self.ensemble_size = ensemble_size
         self.device = device
         self.load_folder = load_folder
-        self.ensemble_size = ensemble_size
-        self.model = model
 
     def forward(self, x):
         inputs = []
@@ -45,15 +45,11 @@ class DeepEnsemble(nn.Module):
                 param.requires_grad_(False)
             inputs.append(self.model(x))
 
-        outputs = torch.stack(inputs)  # shape = (ensemble_size, b, c, w, h)
+        outputs = torch.stack(inputs)  # (ensemble_size, b, c, w, h)
         sigmoided = torch.sigmoid(outputs)  # convert to probabilities
         mean = torch.mean(sigmoided, dim=0)  # take mean along stack dimension
-        variance = torch.var(
-            sigmoided, dim=0
-        ).double()  # torch.mean((sigmoided - mean) ** 2, dim=0).double()
-        normalized_variance = (variance - torch.min(variance)) / (
-            torch.max(variance) - torch.min(variance)
-        )
+        variance = torch.var(sigmoided, dim=0).double()  # torch.mean((sigmoided - mean) ** 2, dim=0).double()
+        normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))
 
         return mean, normalized_variance
 
