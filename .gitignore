@@ -131,6 +131,8 @@ dmypy.json
 # Custom
 run.sbatch
 saved_models
+saved_models_etis
+saved_models_cvc
 slurm_output
 run_loop.sbatch
 train_n_models.sh

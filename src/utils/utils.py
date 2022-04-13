@@ -164,9 +164,10 @@ def save_grid(ims, folder, rows=None, cols=None):
         img = ax.imshow(im, cmap="turbo", vmin=im.min(), vmax=im.max())
         ax.set_axis_off()
         ax.set_aspect("equal") 
-        fig.subplots_adjust(right=0.8)
-        cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-        plt.colorbar(img, cax=cbar_ax, ticks=[0, im.max()/2., im.max()], format="%.1e")
+   
+    fig.subplots_adjust(right=0.8)
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+    fig.colorbar(img, cax=cbar_ax, ticks=[0, im.max()/2., im.max()], format="%.1e")
     
     fig.savefig(folder, transparent=False)
 

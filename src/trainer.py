@@ -161,9 +161,9 @@ def run_model(number):
     config["num_workers"] = 4
     config["image_height"] = 256
     config["image_width"] = 256
-    config["model_name"] = "unet_dropout"
+    config["model_name"] = "unet"
     config["save_folder"] = (
-        "/home/feliciaj/PolypSegmentation/saved_models/"
+        "/home/feliciaj/PolypSegmentation/saved_models_cvc/"
         + config["model_name"] + "_BCE/"
     )
 
@@ -239,5 +239,5 @@ def run_model(number):
 
 
 if __name__ == "__main__":
-    number = 1 #int(sys.argv[1])
+    number = int(sys.argv[1])
     run_model(number)

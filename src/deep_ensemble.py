@@ -194,28 +194,32 @@ def run_ensembles(number):
 
     etis_loader = etis_larib_loader(
         batch_size=25,
-        transforms=standard_transforms(256, 256),
+        train_transforms=standard_transforms(256, 256),
+        val_transforms=standard_transforms(256, 256),
         num_workers=4,
         pin_memory=True,
     )
 
-    main_root = "/home/feliciaj/PolypSegmentation"
-    load_folder = main_root + "/saved_models/resunet++_dice/"
+    main_root = "/home/feliciaj/PolypSegmentation/"
+    model = "resunet++_dice/"
 
     if data == "etis":
         save_folder = main_root + "/results/results_etis/ensembles_resunet++_Dice/"
         save_plot_folder = main_root + "/results/results_etis/plots/ensembles/"
         test_loader = etis_loader
+        load_folder = main_root + "saved_models_etis/" + model
 
     elif data == "kvasir":
         save_folder = main_root + "/results/results_kvasir/ensembles_resunet++_Dice/"
         save_plot_folder = main_root + "/results/results_kvasir/plots/ensembles/"
         test_loader = kvasir_loader
+        load_folder = main_root + "saved_models/" + model
 
     else:
         save_folder = main_root + "/results/results_cvc/ensembles_unet_BCE/"
         save_plot_folder = main_root + "/results/results_cvc/plots/ensembles/"
-        # test_loader = cvc_loader
+        load_folder = main_root + "saved_models_cvc/" + model
+        test_loader = cvc_loader
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  #UNet(in_channels=3, out_channels=1).to(device) 
@@ -227,12 +231,12 @@ def run_ensembles(number):
     print(f"Dice={dice}, ensemble size={number}")
 
     filename = "unet_ensembles_vs_score"
-    title = "Deep Ensemble of U-Nets tested on Kvasir-SEG"
+    title = "Different Deep Ensembles tested on Kvasir-SEG"
 
     plot_ensembles_vs_score(save_plot_folder, filename, title)
 
 
 
 if __name__ == "__main__":
-    number = int(sys.argv[1])
+    number = 16 #int(sys.argv[1])
     run_ensembles(number)

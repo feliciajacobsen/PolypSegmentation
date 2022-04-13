@@ -124,26 +124,58 @@ def data_loaders(batch_size, train_transforms, val_transforms, num_workers, pin_
     return train_loader, val_loader, test_loader
 
 
-def etis_larib_loader(batch_size, transforms, num_workers, pin_memory):
+def etis_larib_loader(batch_size, train_transforms, val_transforms, num_workers, pin_memory):
     """
     Function returns an iterable-style dataset of ETIS-Larib dataset. 
     """
-    img_dir = "/home/feliciaj/data/ETIS-Larib/images"
-    mask_dir = "/home/feliciaj/data/ETIS-Larib/masks"
+    train_img_dir = "/home/feliciaj/data/ETIS-Larib/train/train_images"
+    train_mask_dir = "/home/feliciaj/data/ETIS-Larib/train/train_masks"
+    val_img_dir = "/home/feliciaj/data/ETIS-Larib/val/val_images"
+    val_mask_dir = "/home/feliciaj/data/ETIS-Larib/val/val_masks"
+    test_img_dir = "/home/feliciaj/data/ETIS-Larib/test/test_images"
+    test_mask_dir = "/home/feliciaj/data/ETIS-Larib/test/test_masks"
 
-    ds = ETISLaribDataset(
-        image_dir = img_dir,
-        mask_dir = mask_dir,
-        transform = transforms,
+    train_ds = ETISLaribDataset(
+        image_dir = train_img_dir,
+        mask_dir = train_mask_dir,
+        transform = train_transforms,
     )
 
-    loader = DataLoader(
-        ds,
+    train_loader = DataLoader(
+        train_ds,
+        batch_size = batch_size,
+        num_workers = num_workers,
+        pin_memory = pin_memory,
+        shuffle = True,
+    )
+
+    val_ds = ETISLaribDataset(
+        image_dir = val_img_dir,
+        mask_dir = val_mask_dir,
+        transform = val_transforms,
+    )
+
+    val_loader = DataLoader(
+        val_ds,
+        batch_size = batch_size,
+        num_workers = num_workers,
+        pin_memory = pin_memory,
+        shuffle = True,
+    )
+    
+    test_ds = ETISLaribDataset(
+        image_dir = test_img_dir,
+        mask_dir = test_mask_dir,
+        transform = val_transforms
+    )
+
+    test_loader = DataLoader(
+        test_ds,
         batch_size = batch_size,
         num_workers = num_workers,
         pin_memory = pin_memory,
         shuffle = False,
-    )
+    ) 
 
     return loader
 
@@ -179,9 +211,9 @@ def move_images(train_frac=0.8, test_frac=0.1):
 
     Mask must have equal filename as its corresponding image.
     """
-    data_set = KvasirSEGDataset("/home/feliciaj/data/Kvasir-SEG/images/", "/home/feliciaj/data/Kvasir-SEG/masks/", transform=None)
-
-    base_path = "/home/feliciaj/data/Kvasir-SEG/"
+    base_path = "/home/feliciaj/data/ETIS-Larib/"
+    #data_set = KvasirSEGDataset(base_path+"images/", base_path+"masks/", transform=None)
+    data_set = ETISLaribDataset(base_path+"images/", base_path+"masks/", transform=None)
 
     dirs = [
         base_path+"train/train_images/", 
@@ -202,7 +234,7 @@ def move_images(train_frac=0.8, test_frac=0.1):
     for i, f in enumerate(filenames):
         if (i < train_frac * N):
             middle_path = "train/train_"
-        elif (i < (test_frac + test_frac) * N):
+        elif (i < (train_frac + test_frac) * N):
             middle_path = "test/test_"    
         else:
             middle_path = "val/val_"
@@ -215,16 +247,16 @@ def move_images(train_frac=0.8, test_frac=0.1):
 
         # copy masks
         shutil.copy(
-            base_path + "masks/" + f, 
-            base_path + middle_path + "masks/" + f
+            base_path + "masks/p" + f, 
+            base_path + middle_path + "masks/p" + f
         )
 
 
 
 if __name__ == "__main__":
     #move_images() # only run this once to split data
-    KvasirSEGDataset(image_dir="/home/feliciaj/data/Kvasir-SEG/images/", mask_dir="/home/feliciaj/data/Kvasir-SEG/masks/")
-   
+    #KvasirSEGDataset(image_dir="/home/feliciaj/data/Kvasir-SEG/images/", mask_dir="/home/feliciaj/data/Kvasir-SEG/masks/")
+    move_images()
 
 
     

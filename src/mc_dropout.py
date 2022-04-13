@@ -32,7 +32,7 @@ from utils.metrics import (
 class MCD(nn.Module):
     def __init__(self, model, forward_passes, device, load_folder):
         super().__init__()
-        self.model = model
+        self.model = model.to(device)
         self.forward_passes = forward_passes
         self.device = device
         self.load_folder = load_folder
