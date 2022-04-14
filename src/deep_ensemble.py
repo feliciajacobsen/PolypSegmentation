@@ -49,7 +49,10 @@ class DeepEnsemble(nn.Module):
         sigmoided = torch.sigmoid(outputs)  # convert to probabilities
         mean = torch.mean(sigmoided, dim=0)  # take mean along stack dimension
         variance = torch.var(sigmoided, dim=0).double()  # torch.mean((sigmoided - mean) ** 2, dim=0).double()
-        normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))
+
+        m, s = torch.mean(variance), torch.std(variance)
+        #normalized_variance = (variance-torch.min(variance)) / (torch.max(variance)-torch.min(variance))
+        normalized_variance = (variance-m) / s
 
         return mean, normalized_variance
 
@@ -159,6 +162,8 @@ def dice_list():
         0.7434531716286275
     ]
 
+    resunetplusplus_BCE = []
+
     return unet_BCE, unet_dice, resunetplusplus_dice
 
 
@@ -172,7 +177,7 @@ def plot_ensembles_vs_score(save_plot_folder, filename, title):
     plt.grid(ls="dashed", alpha=0.7)
     plt.xticks(range(1,  len(unet_bce)+1))
     plt.xlabel("Ensemble size")
-    plt.ylabel("Dice similarity coefficient")
+    plt.ylabel("DSC")
     plt.title(title)
     plt.savefig(save_plot_folder + filename + ".png")
 
@@ -203,17 +208,18 @@ def run_ensembles(number):
     main_root = "/home/feliciaj/PolypSegmentation/"
     model = "resunet++_dice/"
 
-    if data == "etis":
-        save_folder = main_root + "/results/results_etis/ensembles_resunet++_Dice/"
-        save_plot_folder = main_root + "/results/results_etis/plots/ensembles/"
-        test_loader = etis_loader
-        load_folder = main_root + "saved_models_etis/" + model
 
-    elif data == "kvasir":
+    if data == "kvasir":
         save_folder = main_root + "/results/results_kvasir/ensembles_resunet++_Dice/"
         save_plot_folder = main_root + "/results/results_kvasir/plots/ensembles/"
         test_loader = kvasir_loader
         load_folder = main_root + "saved_models/" + model
+
+    elif data == "etis":
+        save_folder = main_root + "/results/results_etis/ensembles_resunet++_Dice/"
+        save_plot_folder = main_root + "/results/results_etis/plots/ensembles/"
+        test_loader = etis_loader
+        load_folder = main_root + "saved_models_etis/" + model
 
     else:
         save_folder = main_root + "/results/results_cvc/ensembles_unet_BCE/"

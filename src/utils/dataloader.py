@@ -177,7 +177,7 @@ def etis_larib_loader(batch_size, train_transforms, val_transforms, num_workers,
         shuffle = False,
     ) 
 
-    return loader
+    return train_loader, val_loader, test_loader
 
 
 def cvc_clinic_loader(batch_size, transforms, num_workers, pin_memory):
@@ -256,8 +256,7 @@ def move_images(train_frac=0.8, test_frac=0.1):
 if __name__ == "__main__":
     #move_images() # only run this once to split data
     #KvasirSEGDataset(image_dir="/home/feliciaj/data/Kvasir-SEG/images/", mask_dir="/home/feliciaj/data/Kvasir-SEG/masks/")
-    move_images()
-
+    pass
 
     
 
