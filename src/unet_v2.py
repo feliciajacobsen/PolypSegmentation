@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-########################## code from vajira
+########################## unet dropout architecture proposed by vajira
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
     def __init__(self, in_channels, out_channels):
