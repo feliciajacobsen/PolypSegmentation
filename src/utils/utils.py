@@ -166,8 +166,8 @@ def save_grid(ims, folder, rows=None, cols=None):
         ax.set_aspect("equal") 
    
     fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.15, 0.025, 0.8])
-    fig.colorbar(img, cax=cbar_ax, ticks=[0, ims.max()/2., ims.max()])
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.025, 0.7])
+    fig.colorbar(img, cax=cbar_ax, ticks=[0, 0.5, 1.0])
     
     fig.savefig(folder, transparent=False)
 

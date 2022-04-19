@@ -49,10 +49,7 @@ class DeepEnsemble(nn.Module):
         sigmoided = torch.sigmoid(outputs)  # convert to probabilities
         mean = torch.mean(sigmoided, dim=0)  # take mean along stack dimension
         variance = torch.var(sigmoided, dim=0).double()  # torch.mean((sigmoided - mean) ** 2, dim=0).double()
-
-        m, s = torch.mean(variance), torch.std(variance)
-        #normalized_variance = (variance-torch.min(variance)) / (torch.max(variance)-torch.min(variance))
-        normalized_variance = (variance-m) / s
+        normalized_variance = (variance-torch.min(variance)) / (torch.max(variance)-torch.min(variance))
 
         return mean, normalized_variance
 
@@ -206,29 +203,30 @@ def run_ensembles(number):
     )
 
     main_root = "/home/feliciaj/PolypSegmentation/"
-    model = "resunet++_dice/"
+    model_root = "unet_dice/"  #"resunet++_dice/"
 
 
     if data == "kvasir":
-        save_folder = main_root + "/results/results_kvasir/ensembles_resunet++_Dice/"
+        save_folder = main_root + "/results/results_kvasir/ensembles_" + model_root 
         save_plot_folder = main_root + "/results/results_kvasir/plots/ensembles/"
         test_loader = kvasir_loader
-        load_folder = main_root + "saved_models/" + model
+        load_folder = main_root + "saved_models/" + model_root
 
     elif data == "etis":
-        save_folder = main_root + "/results/results_etis/ensembles_resunet++_Dice/"
+        save_folder = main_root + "/results/results_etis/ensembles_"+ model_root
         save_plot_folder = main_root + "/results/results_etis/plots/ensembles/"
         test_loader = etis_loader
-        load_folder = main_root + "saved_models_etis/" + model
+        load_folder = main_root + "saved_models_etis/" + model_root
 
     else:
-        save_folder = main_root + "/results/results_cvc/ensembles_unet_BCE/"
+        save_folder = main_root + "/results/results_cvc/ensembles_" + model_root
         save_plot_folder = main_root + "/results/results_cvc/plots/ensembles/"
-        load_folder = main_root + "saved_models_cvc/" + model
+        load_folder = main_root + "saved_models_cvc/" + model_root
         test_loader = cvc_loader
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  #UNet(in_channels=3, out_channels=1).to(device) 
+    #model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  
+    model = UNet(in_channels=3, out_channels=1).to(device) 
     ensemble_size = number
     ensemble = DeepEnsemble(model, ensemble_size, device, load_folder)
     test_ensembles(ensemble, device, test_loader, save_folder)
@@ -239,7 +237,7 @@ def run_ensembles(number):
     filename = "unet_ensembles_vs_score"
     title = "Different Deep Ensembles tested on Kvasir-SEG"
 
-    plot_ensembles_vs_score(save_plot_folder, filename, title)
+    #plot_ensembles_vs_score(save_plot_folder, filename, title)
 
 
 
