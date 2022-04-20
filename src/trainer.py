@@ -144,39 +144,43 @@ def train_validate(
         plt.title(model_name)
         plt.legend()
         plt.savefig(
-            f"/home/feliciaj/PolypSegmentation/results/loss_plots/{loss_plot_name}.png"
+            f"/home/feliciaj/PolypSegmentation/results/results_kvasir/loss_plots/{loss_plot_name}.png"
         )
 
 
 def run_model(number):
     config = dict()
-    config["lr"] = 1e-4
+    config["lr"] = 1e-5
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    config["plot_loss"] = False
-    config["num_epochs"] = 150
+    config["plot_loss"] = True #False
+    config["num_epochs"] = 300
     config["in_channels"] = 3
     config["numcl"] = 1  # no of classes/output channels
-    config["batch_size"] = 32
+    config["batch_size"] = 16
     config["pin_memory"] = True
     config["num_workers"] = 4
     config["image_height"] = 256
     config["image_width"] = 256
-    config["model_name"] = "unet"
+    config["model_name"] = "resunet++" 
     config["save_folder"] = (
-        "/home/feliciaj/PolypSegmentation/saved_models_cvc/"
+        "/home/feliciaj/PolypSegmentation/saved_models/"
         + config["model_name"] + "_BCE/"
     )
 
     if config["model_name"] == "unet":
         model = UNet(config["in_channels"], config["numcl"]).to(config["device"])
+
     elif config["model_name"] == "doubleunet":
         model = DoubleUNet(config["in_channels"], config["numcl"]).to(config["device"])
+
     elif config["model_name"] == "resunet++":
         model = ResUnetPlusPlus(config["in_channels"], config["numcl"]).to(
             config["device"]
         )
+
     elif config["model_name"] == "unet_dropout":
         model = UNet_dropout(config["in_channels"], config["numcl"]).to(config["device"])
+
     else:
         print("ERROR: Model not found!")
 
@@ -202,15 +206,17 @@ def run_model(number):
     #criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
+    #optimizer = optim.SGD(model.parameters(), lr=config["lr"], momentum=0.9)
 
-    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.1)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, 
         factor=0.1, 
-        patience=20, 
-        min_lr=1e-7,
+        patience=1, 
+        min_lr=1e-9,
         verbose=True,
     )
+    
+    scheduler = None
 
     early_stopping = None  # EarlyStopping()
 
@@ -239,5 +245,5 @@ def run_model(number):
 
 
 if __name__ == "__main__":
-    number = int(sys.argv[1])
+    number = 1 #int(sys.argv[1]) # number of models trained sequentially
     run_model(number)

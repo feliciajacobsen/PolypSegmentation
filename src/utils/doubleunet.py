@@ -6,7 +6,7 @@ import torchvision.transforms.functional as TF
 
 import numpy as np
 
-from utils.modules import SE_Block, ASPP, Res_Shortcut
+from modules import SE_Block, ASPP, Res_Shortcut
 
 
 class VGGBlock(nn.Module):

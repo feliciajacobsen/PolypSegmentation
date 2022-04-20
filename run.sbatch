@@ -28,4 +28,4 @@ srun nvidia-smi
 hostname
 # Example of sourcing prebuilt python venv
 # . /home/<username>/py38-venv/bin/activate
-srun python3 /home/feliciaj/PolypSegmentation/src/deep_ensemble.py
+srun python3 /home/feliciaj/PolypSegmentation/src/trainer.py

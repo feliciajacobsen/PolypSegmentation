@@ -203,7 +203,7 @@ def run_ensembles(number):
     )
 
     main_root = "/home/feliciaj/PolypSegmentation/"
-    model_root = "unet_dice/"  #"resunet++_dice/"
+    model_root = "resunet++_BCE" #"unet_dice/"  #"resunet++_dice/"
 
 
     if data == "kvasir":
@@ -225,8 +225,8 @@ def run_ensembles(number):
         test_loader = cvc_loader
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  
-    model = UNet(in_channels=3, out_channels=1).to(device) 
+    model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  
+    #model = UNet(in_channels=3, out_channels=1).to(device) 
     ensemble_size = number
     ensemble = DeepEnsemble(model, ensemble_size, device, load_folder)
     test_ensembles(ensemble, device, test_loader, save_folder)
