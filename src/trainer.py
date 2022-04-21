@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 
 # Local imports
 from unet import UNet, UNet_dropout
-from resunetplusplus import ResUnetPlusPlus
-from doubleunet import DoubleUNet
+from resunetplusplus import ResUnetPlusPlus, ResUnetPlusPlus_dropout
 from utils.dataloader import data_loaders
 from utils.utils import (
     check_scores,
@@ -21,10 +20,10 @@ from utils.utils import (
     standard_transforms,
 )
 
-from utils.metrics import BCEDiceLoss, DiceLoss
+from utils.metrics import BCEDiceLoss, DiceLoss, dice_coef, iou_score
 
 
-def train_model(loader, model, device, optimizer, criterion):
+def train_model(loader, model, device, optimizer, criterion, scheduler):
     """
     Function perform one epoch on entire dataset and prints loss for each batch.
 
@@ -33,7 +32,8 @@ def train_model(loader, model, device, optimizer, criterion):
         model (class): provides with a forward method.
         device (cuda object): cpu or gpu.
         optimizer (torch object): optimization algorithm.
-        criterion (torch oject): loss function with backward method.
+        criterion (torch object): loss function with backward method.
+        scheduler (torch object): learning rate scheduler.
 
     Returns:
         Mean loss
@@ -43,7 +43,6 @@ def train_model(loader, model, device, optimizer, criterion):
     scaler = torch.cuda.amp.GradScaler()
 
     model.train()
-
     losses = []
     for batch_idx, (data, targets) in enumerate(tqdm_loader):
         # move data and masks to same device as computed gradients
@@ -68,7 +67,13 @@ def train_model(loader, model, device, optimizer, criterion):
         # update tqdm loop
         tqdm_loader.set_postfix(loss=loss.item())
 
-    return sum(losses) / len(loader)
+    mean_loss = sum(losses) / len(loader)
+
+    # take scheduler step
+    if scheduler is not None:
+        scheduler.step(mean_loss)
+
+    return mean_loss
 
 
 def train_validate(
@@ -89,9 +94,8 @@ def train_validate(
     val_epoch_loss, train_epoch_loss = [], []
 
     for epoch in range(epochs):
-
         # train on training data
-        mean_train_loss = train_model(train_loader, model, device, optimizer, criterion)
+        mean_train_loss = train_model(train_loader, model, device, optimizer, criterion, scheduler)
         train_epoch_loss.append(mean_train_loss)
 
         # check validation loss, and print validation metrics
@@ -99,10 +103,6 @@ def train_validate(
         print("At epoch %d :" % epoch)
         mean_val_loss, _, _ = check_scores(val_loader, model, device, criterion)
         val_epoch_loss.append(mean_val_loss)
-
-        # take scheduler step
-        if scheduler is not None:
-            scheduler.step(mean_val_loss)
 
         # save model after training
         if epoch == epochs - 1:
@@ -150,13 +150,14 @@ def train_validate(
 
 def run_model(number):
     config = dict()
-    config["lr"] = 1e-5
+    config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     config["plot_loss"] = True #False
+    config["early_stopping"] = None
     config["num_epochs"] = 300
     config["in_channels"] = 3
     config["numcl"] = 1  # no of classes/output channels
-    config["batch_size"] = 16
+    config["batch_size"] = 32
     config["pin_memory"] = True
     config["num_workers"] = 4
     config["image_height"] = 256
@@ -202,7 +203,7 @@ def run_model(number):
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
 
     criterion = nn.BCEWithLogitsLoss()  #  Sigmoid layer and the BCELoss
-    #criterion = BCEDiceLoss() # Sigmoid layer and Dice + BCE loss
+    #criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(10.)) 
     #criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
@@ -211,14 +212,10 @@ def run_model(number):
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, 
         factor=0.1, 
-        patience=1, 
-        min_lr=1e-9,
+        patience=20, 
+        min_lr=1e-8,
         verbose=True,
     )
-    
-    scheduler = None
-
-    early_stopping = None  # EarlyStopping()
 
     loaders = data_loaders(
         batch_size=config["batch_size"],
@@ -227,7 +224,7 @@ def run_model(number):
         num_workers=config["num_workers"],
         pin_memory=config["pin_memory"],
     )
-
+    
     train_validate(
         epochs=config["num_epochs"],
         device=config["device"],
@@ -238,10 +235,11 @@ def run_model(number):
         loaders=loaders,
         save_folder=config["save_folder"],
         model_name=config["model_name"],
-        early_stopping=early_stopping,
+        early_stopping=config["early_stopping"],
         plot_loss=config["plot_loss"],
         number=number,
     )
+
 
 
 if __name__ == "__main__":
