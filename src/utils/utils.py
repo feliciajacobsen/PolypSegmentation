@@ -70,7 +70,7 @@ def check_scores(loader, model, device, criterion):
         for x, y in loader:
             x = x.to(device)
             y = y.to(device).unsqueeze(1)
-            prob = torch.sigmoid(model(x))
+            prob = model(x)#torch.sigmoid(model(x))
             pred = (prob > 0.5).float()
             num_correct += (pred == y).sum()
             num_pixels += torch.numel(pred)

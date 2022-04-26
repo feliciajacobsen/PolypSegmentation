@@ -23,7 +23,7 @@ from utils.utils import (
 from utils.metrics import BCEDiceLoss, DiceLoss, dice_coef, iou_score
 
 
-def train_model(loader, model, device, optimizer, criterion, scheduler):
+def train_model(loader, model, device, optimizer, criterion, scheduler, epoch):
     """
     Function perform one epoch on entire dataset and prints loss for each batch.
 
@@ -71,7 +71,8 @@ def train_model(loader, model, device, optimizer, criterion, scheduler):
 
     # take scheduler step
     if scheduler is not None:
-        scheduler.step(mean_loss)
+        #scheduler.step(mean_loss)
+        scheduler.step(epoch=epoch)
 
     return mean_loss
 
@@ -92,17 +93,19 @@ def train_validate(
 ):
     train_loader, val_loader, _ = loaders
     val_epoch_loss, train_epoch_loss = [], []
+    dice = []
 
     for epoch in range(epochs):
         # train on training data
-        mean_train_loss = train_model(train_loader, model, device, optimizer, criterion, scheduler)
+        mean_train_loss = train_model(train_loader, model, device, optimizer, criterion, scheduler,epoch)
         train_epoch_loss.append(mean_train_loss)
 
         # check validation loss, and print validation metrics
         print("------------")
         print("At epoch %d :" % epoch)
-        mean_val_loss, _, _ = check_scores(val_loader, model, device, criterion)
+        mean_val_loss, running_dice, _ = check_scores(val_loader, model, device, criterion)
         val_epoch_loss.append(mean_val_loss)
+        dice.append(running_dice)
 
         # save model after training
         if epoch == epochs - 1:
@@ -120,7 +123,7 @@ def train_validate(
                     checkpoint,
                     save_folder + model_name + f"_{number}.pt",
                 )
-
+        
         if early_stopping is not None:
             early_stopping(mean_val_loss)
             if early_stopping.early_stop:
@@ -137,8 +140,9 @@ def train_validate(
     if plot_loss:
         loss_plot_name = "loss_" + model_name
         plt.figure(figsize=(10, 7))
-        plt.plot(train_epoch_loss, color="blue", label="train loss")
-        plt.plot(val_epoch_loss, color="green", label="validataion loss")
+        #plt.plot(train_epoch_loss, color="blue", label="train loss")
+        #plt.plot(val_epoch_loss, color="green", label="validataion loss")
+        plt.plot(dice, label="dice")
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
         plt.title(model_name)
@@ -152,9 +156,9 @@ def run_model(number):
     config = dict()
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    config["plot_loss"] = True #False
+    config["plot_loss"] = True
     config["early_stopping"] = None
-    config["num_epochs"] = 300
+    config["num_epochs"] = 150
     config["in_channels"] = 3
     config["numcl"] = 1  # no of classes/output channels
     config["batch_size"] = 32
@@ -202,13 +206,23 @@ def run_model(number):
 
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
 
-    criterion = nn.BCEWithLogitsLoss()  #  Sigmoid layer and the BCELoss
+    criterion = nn.BCELoss() #nn.BCEWithLogitsLoss()  #  Sigmoid layer and the BCELoss
     #criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(10.)) 
     #criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
+    #optimizer = optim.AdamW(model.parameters(), lr=config["lr"])
     #optimizer = optim.SGD(model.parameters(), lr=config["lr"], momentum=0.9)
 
+    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        optimizer, 
+        T_0=20, 
+        T_mult=1, 
+        eta_min=1e-8, 
+        verbose=True,
+        )
+
+    """
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, 
         factor=0.1, 
@@ -216,6 +230,7 @@ def run_model(number):
         min_lr=1e-8,
         verbose=True,
     )
+    """
 
     loaders = data_loaders(
         batch_size=config["batch_size"],
