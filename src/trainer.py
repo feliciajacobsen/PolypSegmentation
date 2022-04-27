@@ -133,7 +133,7 @@ def train_validate(
         save_preds_as_imgs(
             val_loader,
             model,
-            folder="/home/feliciaj/data/Kvasir-SEG/" + model_name,
+            folder="/home/feliciaj/data/Kvasir-SEG/" + model_name + "_BCE",
             device=device,
         )
 
@@ -158,7 +158,7 @@ def run_model(number):
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     config["plot_loss"] = False # set to true if we want to plot loss
     config["early_stopping"] = None
-    config["num_epochs"] = 50
+    config["num_epochs"] = 150
     config["in_channels"] = 3
     config["numcl"] = 1  # no of classes/output channels
     config["batch_size"] = 32
@@ -166,7 +166,7 @@ def run_model(number):
     config["num_workers"] = 4
     config["image_height"] = 256
     config["image_width"] = 256
-    config["model_name"] = "resunet++" 
+    config["model_name"] = "resunet++_dropout" 
     config["save_folder"] = (
         "/home/feliciaj/PolypSegmentation/saved_models/"
         + config["model_name"] + "_BCE/"
@@ -175,16 +175,14 @@ def run_model(number):
     if config["model_name"] == "unet":
         model = UNet(config["in_channels"], config["numcl"]).to(config["device"])
 
-    elif config["model_name"] == "doubleunet":
-        model = DoubleUNet(config["in_channels"], config["numcl"]).to(config["device"])
-
     elif config["model_name"] == "resunet++":
-        model = ResUnetPlusPlus(config["in_channels"], config["numcl"]).to(
-            config["device"]
-        )
+        model = ResUnetPlusPlus(config["in_channels"], config["numcl"]).to(config["device"])
 
     elif config["model_name"] == "unet_dropout":
         model = UNet_dropout(config["in_channels"], config["numcl"]).to(config["device"])
+
+    elif config["model_name"] == "resunet++_dropout":
+        model = ResUnetPlusPlus_dropout(config["in_channels"], config["numcl"]).to(config["device"])    
 
     else:
         print("ERROR: Model not found!")
@@ -207,7 +205,6 @@ def run_model(number):
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
 
     criterion = nn.BCEWithLogitsLoss()  #  Sigmoid layer and the BCELoss
-    #criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(10.)) 
     #criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
@@ -220,17 +217,8 @@ def run_model(number):
         T_mult=1, 
         eta_min=1e-8, 
         verbose=True,
-        )
-
-    """
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, 
-        factor=0.1, 
-        patience=20, 
-        min_lr=1e-8,
-        verbose=True,
     )
-    """
+    
 
     loaders = data_loaders(
         batch_size=config["batch_size"],
@@ -258,5 +246,5 @@ def run_model(number):
 
 
 if __name__ == "__main__":
-    number = int(sys.argv[1]) # number of models trained sequentially
+    number = 1 #int(sys.argv[1]) # number of models trained sequentially
     run_model(number)

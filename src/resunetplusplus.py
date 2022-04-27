@@ -90,10 +90,8 @@ class ResUnetPlusPlus(nn.Module):
 
 class ResUnetPlusPlus_dropout(nn.Module):
     def __init__(self, in_channels, out_channels, filters=[32, 64, 128, 256, 512], droprate=0.1):
-        super(ResUnetPlusPlus, self).__init__()
+        super(ResUnetPlusPlus_dropout, self).__init__()
         """
-        credit: https://github.com/rishikksh20/ResUnet/blob/master/core/res_unet_plus.py
-
         Resunetplusplus model
         """
 

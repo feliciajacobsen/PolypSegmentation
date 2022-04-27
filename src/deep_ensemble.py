@@ -160,7 +160,22 @@ def dice_list():
     ]
 
     resunetplusplus_BCE = [
-
+        0.2996079171214447,
+        0.3306244298015081,
+        0.3228024694281624,
+        0.34698293334304636,
+        0.35120765247748564,
+        0.3498512793232355,
+        0.3454878134731113, 
+        0.34813528426129253, 
+        0.3332382677162492, 
+        0.3342971379598024,
+        0.3306325944364002,
+        0.32356674419668313,
+        0.3259832173221119,
+        0.3298690111203878,
+        0.33196417633060415,
+        0.33459621990629695
     ]
 
     unet_dropout_dice = [
@@ -201,8 +216,12 @@ def dice_list():
         0.7759334599290217
     ]
 
+    resunetplusplus_dropout_dice = []
+    
+    resunetplusplus_dropout_BCE = []
 
-    return unet_BCE, unet_dice, resunetplusplus_dice
+
+    return unet_BCE, unet_dice, resunetplusplus_dice, resunetplusplus_BCE, unet_dropout_dice, unet_dropout_bce
 
 
 def plot_ensembles_vs_score(save_plot_folder, filename, title):
@@ -231,13 +250,11 @@ def run_ensembles(number):
         val_transforms=standard_transforms(256, 256),
         num_workers=4,
         pin_memory=True,
+    )
 
     main_root = "/home/feliciaj/PolypSegmentation/"
-    model_root = "resunet++_BCE/" #"unet_dice/"  #"resunet++_dice/"
-
-    save_folder = main_root + "/results/results_kvasir/ensembles_" + model_root 
-    test_loader = kvasir_loader
-    load_folder = main_root + "saved_models/" + model_root
+    save_folder = main_root + "/results/results_kvasir/ensembles_resunet++_BCE/" 
+    load_folder = main_root + "saved_models/resunet++_BCE/" 
 
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
