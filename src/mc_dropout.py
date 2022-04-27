@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 # import models
-from resunetplusplus import ResUnetPlusPlus
-from doubleunet import DoubleUNet
+from resunetplusplus import ResUnetPlusPlus, ResUnetPlusPlus_dropout
 from unet import UNet_dropout, UNet
 # from unet_vajira import UNet_dropout
 
@@ -181,6 +180,7 @@ def plot_models_vs_dice(model, forward_passes, loader, device, load_folder, save
             running_dice += dice_coef(pred, y)
         dice.append(running_dice/len(loader))
 
+    print(dice)
     plt.figure(figsize=(8, 7))
     plt.plot(range(1, forward_passes + 1), dice, ".-", label="Dice coeff")
     plt.legend(loc="best")
@@ -195,7 +195,7 @@ def plot_models_vs_dice(model, forward_passes, loader, device, load_folder, save
 
 
 if __name__ == "__main__":
-    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout_vajira/"
+    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
     save_plot_path = "/home/feliciaj/PolypSegmentation/results/results_kvasir/plots/MC_dropout/"
     max_epoch = 150
     rates = [0, 0.1, 0.2]
@@ -236,19 +236,22 @@ if __name__ == "__main__":
 
     passes = 5
     img_folder = (
-        "/home/feliciaj/PolypSegmentation/results/results_kvasir/mc_dropout_unet_dice"
+        "/home/feliciaj/PolypSegmentation/results/results_kvasir/mc_dropout_unet_bce"
     )
     load_path = (
-        "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/unet_dropout.pt"
+        "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout_BCE/unet_dropout.pt"
     )
 
-    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
+    """
+    # tain models with different dropout rates
+    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout_dice/"
     rates = [0, 0.1, 0.3, 0.5]
     fig_name = (
         f"U-Net with dropout predicted on Kvasir-SEG validation data with rates={rates}"
     )
-    #obj.train_n_models(save_path, save_plot_path, fig_name, rates, True) # train model
-    #obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/unet")
+    obj.train_n_models(save_path, save_plot_path, fig_name, rates, True) # train model
+    obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/unet")
+    """
 
     _, _, test_loader = loaders
     forward_passes = 16

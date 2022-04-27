@@ -159,7 +159,48 @@ def dice_list():
         0.7434531716286275
     ]
 
-    resunetplusplus_BCE = []
+    resunetplusplus_BCE = [
+
+    ]
+
+    unet_dropout_dice = [
+        0.7729696255613752, 
+        0.7731290201825816, 
+        0.7732157485887791, 
+        0.7731296698771597, 
+        0.7729378863174261, 
+        0.7732144329922906, 
+        0.7731877811587675, 
+        0.7730678559871882, 
+        0.7732069613942121, 
+        0.7731418096160981, 
+        0.773207496222386, 
+        0.7731060664851418, 
+        0.77311611262056, 
+        0.7736303325912585, 
+        0.7732633001381914, 
+        0.7731157896008835
+    ]
+
+    unet_dropout_bce = [
+        0.77594231632151, 
+        0.7758483832497454, 
+        0.7761015057019928, 
+        0.7762778448032379, 
+        0.7760717055307651, 
+        0.7759592302793221, 
+        0.7756697593855593,
+         0.7756638080299914, 
+        0.7754555193831894,
+         0.7759654494746513, 
+        0.7755255057126431, 
+        0.7757711731685435, 
+        0.7756915490764887, 
+        0.7756499144294388, 
+        0.7760246922279809, 
+        0.7759334599290217
+    ]
+
 
     return unet_BCE, unet_dice, resunetplusplus_dice
 
@@ -184,45 +225,20 @@ def plot_ensembles_vs_score(save_plot_folder, filename, title):
 def run_ensembles(number):
     # print(f"This is a sanity check, random number is : {torch.rand(1)}")
 
-    data = "kvasir"
-
-    _, _, kvasir_loader = data_loaders(
+    _, _, test_loader = data_loaders(
         batch_size=25,
         train_transforms=standard_transforms(256, 256),
         val_transforms=standard_transforms(256, 256),
         num_workers=4,
         pin_memory=True,
-    )
-
-    etis_loader = etis_larib_loader(
-        batch_size=25,
-        train_transforms=standard_transforms(256, 256),
-        val_transforms=standard_transforms(256, 256),
-        num_workers=4,
-        pin_memory=True,
-    )
 
     main_root = "/home/feliciaj/PolypSegmentation/"
-    model_root = "resunet++_BCE" #"unet_dice/"  #"resunet++_dice/"
+    model_root = "resunet++_BCE/" #"unet_dice/"  #"resunet++_dice/"
 
+    save_folder = main_root + "/results/results_kvasir/ensembles_" + model_root 
+    test_loader = kvasir_loader
+    load_folder = main_root + "saved_models/" + model_root
 
-    if data == "kvasir":
-        save_folder = main_root + "/results/results_kvasir/ensembles_" + model_root 
-        save_plot_folder = main_root + "/results/results_kvasir/plots/ensembles/"
-        test_loader = kvasir_loader
-        load_folder = main_root + "saved_models/" + model_root
-
-    elif data == "etis":
-        save_folder = main_root + "/results/results_etis/ensembles_"+ model_root
-        save_plot_folder = main_root + "/results/results_etis/plots/ensembles/"
-        test_loader = etis_loader
-        load_folder = main_root + "saved_models_etis/" + model_root
-
-    else:
-        save_folder = main_root + "/results/results_cvc/ensembles_" + model_root
-        save_plot_folder = main_root + "/results/results_cvc/plots/ensembles/"
-        load_folder = main_root + "saved_models_cvc/" + model_root
-        test_loader = cvc_loader
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  
@@ -231,9 +247,14 @@ def run_ensembles(number):
     ensemble = DeepEnsemble(model, ensemble_size, device, load_folder)
     test_ensembles(ensemble, device, test_loader, save_folder)
 
+
+    # print dice
     dice = get_dice(ensemble_size, model, test_loader, device, load_folder)
     print(f"Dice={dice}, ensemble size={number}")
 
+
+    # make plot of all ensembles
+    save_plot_folder = main_root + "/results/results_kvasir/plots/ensembles/"
     filename = "unet_ensembles_vs_score"
     title = "Different Deep Ensembles tested on Kvasir-SEG"
 
@@ -242,5 +263,5 @@ def run_ensembles(number):
 
 
 if __name__ == "__main__":
-    number = 16 #int(sys.argv[1])
+    number = int(sys.argv[1])
     run_ensembles(number)

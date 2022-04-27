@@ -117,7 +117,7 @@ def train_validate(
                     "criterion": criterion.state_dict(),
                     "loss": mean_val_loss,
                 }
-                # change name of file and run in order to save more models
+                
                 save_checkpoint(
                     epoch,
                     checkpoint,
@@ -156,9 +156,9 @@ def run_model(number):
     config = dict()
     config["lr"] = 1e-4
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    config["plot_loss"] = True
+    config["plot_loss"] = False # set to true if we want to plot loss
     config["early_stopping"] = None
-    config["num_epochs"] = 150
+    config["num_epochs"] = 50
     config["in_channels"] = 3
     config["numcl"] = 1  # no of classes/output channels
     config["batch_size"] = 32
@@ -206,7 +206,7 @@ def run_model(number):
 
     val_transforms = standard_transforms(config["image_height"], config["image_width"])
 
-    criterion = nn.BCELoss() #nn.BCEWithLogitsLoss()  #  Sigmoid layer and the BCELoss
+    criterion = nn.BCEWithLogitsLoss()  #  Sigmoid layer and the BCELoss
     #criterion = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(10.)) 
     #criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
@@ -258,5 +258,5 @@ def run_model(number):
 
 
 if __name__ == "__main__":
-    number = 1 #int(sys.argv[1]) # number of models trained sequentially
+    number = int(sys.argv[1]) # number of models trained sequentially
     run_model(number)
