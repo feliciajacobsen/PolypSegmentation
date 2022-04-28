@@ -283,7 +283,7 @@ def plot_ensembles_vs_score(save_plot_folder):
         resunetplusplus_dropout_BCE,
     ) = dice_list()
 
-    n = range(1, len(unet_bce) + 1)
+    n = range(1, len(unet_BCE) + 1)
     plt.figure(figsize=(8, 7))
     plt.plot(n, unet_dice, ".-", label="Deep ensemble, DSC")
     plt.plot(n, unet_BCE, ".-", label="Deep ensemble,  BCE")
