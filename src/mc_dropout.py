@@ -189,7 +189,7 @@ def plot_models_vs_dice(model, forward_passes, loader, device, load_folder, save
     plt.xlabel("Number of forward passes")
     plt.ylabel("Score")
     plt.title(
-        f"MC droput with {forward_passes} number of {mmodel_name} on Kvasir-SEG"
+        f"MC droput with {forward_passes} number of {model_name} on Kvasir-SEG"
     )
     plt.savefig(save_plot_path + f"{model_name}_dropout_{forward_passes}_models.png")
 
@@ -234,12 +234,12 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     obj = MCDropoutSegmentation(device, loaders, droprate=0.3, lr=0.01)
 
-    passes = 5
+    passes = 16
     img_folder = (
         "/home/feliciaj/PolypSegmentation/results/results_kvasir/mc_dropout_resunet++_dice"
     )
     load_path = (
-        "/home/feliciaj/PolypSegmentation/saved_models/resunet++_dropout_BCE/resunet++_dropout_1.pt"
+        "/home/feliciaj/PolypSegmentation/saved_models/resunet++_dropout_dice/resunet++_dropout_1.pt"
     )
 
     """

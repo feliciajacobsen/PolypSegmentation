@@ -48,8 +48,12 @@ class DeepEnsemble(nn.Module):
         outputs = torch.stack(inputs)  # (ensemble_size, b, c, w, h)
         sigmoided = torch.sigmoid(outputs)  # convert to probabilities
         mean = torch.mean(sigmoided, dim=0)  # take mean along stack dimension
-        variance = torch.var(sigmoided, dim=0).double()  # torch.mean((sigmoided - mean) ** 2, dim=0).double()
-        normalized_variance = (variance-torch.min(variance)) / (torch.max(variance)-torch.min(variance))
+        variance = torch.var(
+            sigmoided, dim=0
+        ).double()  # torch.mean((sigmoided - mean) ** 2, dim=0).double()
+        normalized_variance = (variance - torch.min(variance)) / (
+            torch.max(variance) - torch.min(variance)
+        )
 
         return mean, normalized_variance
 
@@ -101,6 +105,7 @@ def get_dice(ensemble_size, model, loader, device, load_folder):
 
     return dice / len(loader)
 
+
 def dice_list():
     unet_BCE = [
         0.7659695108432987,
@@ -118,14 +123,14 @@ def dice_list():
         0.8053836061785381,
         0.8047402817327324,
         0.8036835469731509,
-        0.8034221510448492
+        0.8034221510448492,
     ]
 
     unet_dice = [
-        0.8049752275876777, 
-        0.806390636469403, 
-        0.8132475716883494, 
-        0.8140264594555717, 
+        0.8049752275876777,
+        0.806390636469403,
+        0.8132475716883494,
+        0.8140264594555717,
         0.8152885230053997,
         0.8175577051451125,
         0.8182383594944287,
@@ -137,7 +142,7 @@ def dice_list():
         0.817242228176009,
         0.8174234227456949,
         0.8170245983639932,
-        0.8171624245168824
+        0.8171624245168824,
     ]
 
     resunetplusplus_dice = [
@@ -156,7 +161,7 @@ def dice_list():
         0.7454024692650959,
         0.745000043328777,
         0.7431514971522293,
-        0.7434531716286275
+        0.7434531716286275,
     ]
 
     resunetplusplus_BCE = [
@@ -166,96 +171,147 @@ def dice_list():
         0.34698293334304636,
         0.35120765247748564,
         0.3498512793232355,
-        0.3454878134731113, 
-        0.34813528426129253, 
-        0.3332382677162492, 
+        0.3454878134731113,
+        0.34813528426129253,
+        0.3332382677162492,
         0.3342971379598024,
         0.3306325944364002,
         0.32356674419668313,
         0.3259832173221119,
         0.3298690111203878,
         0.33196417633060415,
-        0.33459621990629695
+        0.33459621990629695,
     ]
 
     unet_dropout_dice = [
-        0.7729696255613752, 
-        0.7731290201825816, 
-        0.7732157485887791, 
-        0.7731296698771597, 
-        0.7729378863174261, 
-        0.7732144329922906, 
-        0.7731877811587675, 
-        0.7730678559871882, 
-        0.7732069613942121, 
-        0.7731418096160981, 
-        0.773207496222386, 
-        0.7731060664851418, 
-        0.77311611262056, 
-        0.7736303325912585, 
-        0.7732633001381914, 
-        0.7731157896008835
+        0.7729696255613752,
+        0.7731290201825816,
+        0.7732157485887791,
+        0.7731296698771597,
+        0.7729378863174261,
+        0.7732144329922906,
+        0.7731877811587675,
+        0.7730678559871882,
+        0.7732069613942121,
+        0.7731418096160981,
+        0.773207496222386,
+        0.7731060664851418,
+        0.77311611262056,
+        0.7736303325912585,
+        0.7732633001381914,
+        0.7731157896008835,
     ]
 
     unet_dropout_bce = [
-        0.77594231632151, 
-        0.7758483832497454, 
-        0.7761015057019928, 
-        0.7762778448032379, 
-        0.7760717055307651, 
-        0.7759592302793221, 
+        0.77594231632151,
+        0.7758483832497454,
+        0.7761015057019928,
+        0.7762778448032379,
+        0.7760717055307651,
+        0.7759592302793221,
         0.7756697593855593,
-         0.7756638080299914, 
+        0.7756638080299914,
         0.7754555193831894,
-         0.7759654494746513, 
-        0.7755255057126431, 
-        0.7757711731685435, 
-        0.7756915490764887, 
-        0.7756499144294388, 
-        0.7760246922279809, 
-        0.7759334599290217
+        0.7759654494746513,
+        0.7755255057126431,
+        0.7757711731685435,
+        0.7756915490764887,
+        0.7756499144294388,
+        0.7760246922279809,
+        0.7759334599290217,
     ]
 
-    resunetplusplus_dropout_dice = []
-    
+    resunetplusplus_dropout_dice = [
+        0.7483517354582094,
+        0.7478224520263878,
+        0.7479166782699072,
+        0.7481872082831028,
+        0.7480624531404851,
+        0.7483022668784329,
+        0.7476956243711831,
+        0.7481091557552659,
+        0.7482810556851374,
+        0.748419637232455,
+        0.7480954187987829,
+        0.7479184424275176,
+        0.7482037266764936,
+        0.7481870181077591,
+        0.7484523955293922,
+        0.7484181256565565,
+    ]
+
     resunetplusplus_dropout_BCE = [
-        0.3917301728491076, 
-        0.3916995250953805, 
-        0.39210001195623595, 
-        0.3917620228568783, 
-        0.3914567962647908, 
-        0.3918167266812599, 
-        0.3913487937945471, 
-        0.39175347994074483, 
-        0.39149430853159234, 
-        0.39157202402106955, 
-        0.3915086573008246, 
-        0.3916418071079308, 
-        0.3917576828979201, 
-        0.3917245195165765, 
-        0.3918260351406787, 
-        0.3916288094669015
+        0.3917301728491076,
+        0.3916995250953805,
+        0.39210001195623595,
+        0.3917620228568783,
+        0.3914567962647908,
+        0.3918167266812599,
+        0.3913487937945471,
+        0.39175347994074483,
+        0.39149430853159234,
+        0.39157202402106955,
+        0.3915086573008246,
+        0.3916418071079308,
+        0.3917576828979201,
+        0.3917245195165765,
+        0.3918260351406787,
+        0.3916288094669015,
     ]
 
+    return (
+        unet_BCE,
+        unet_dice,
+        resunetplusplus_dice,
+        resunetplusplus_BCE,
+        unet_dropout_dice,
+        unet_dropout_bce,
+        resunetplusplus_dropout_dice,
+        resunetplusplus_dropout_BCE,
+    )
 
-    return unet_BCE, unet_dice, resunetplusplus_dice, resunetplusplus_BCE, unet_dropout_dice, unet_dropout_bce
 
+def plot_ensembles_vs_score(save_plot_folder):
+    (
+        unet_BCE,
+        unet_dice,
+        resunetplusplus_dice,
+        resunetplusplus_BCE,
+        unet_dropout_dice,
+        unet_dropout_BCE,
+        resunetplusplus_dropout_dice,
+        resunetplusplus_dropout_BCE,
+    ) = dice_list()
 
-def plot_ensembles_vs_score(save_plot_folder, filename, title):
-    unet_bce, unet_dice, resunetplusplus_dice = dice_list()
+    n = range(1, len(unet_bce) + 1)
     plt.figure(figsize=(8, 7))
-    plt.plot(range(1,  len(unet_bce)+1), unet_bce, ".-", label="U-Net trained with BCE")
-    plt.plot(range(1,  len(unet_dice)+1), unet_dice, "r.-", label="U-Net trained with DSC")
-    plt.plot(range(1,  len(resunetplusplus_dice)+1), resunetplusplus_dice, "g.-", label="ResUnet++ trained with DSC")
+    plt.plot(n, unet_dice, ".-", label="Deep ensemble, DSC")
+    plt.plot(n, unet_BCE, ".-", label="Deep ensemble,  BCE")
+    plt.plot(n, unet_dropout_dice, ".-", label="MC dropout, DSC")
+    plt.plot(n, unet_dropout_BCE, ".-", label="MC dropout BCE")
+
     plt.legend(loc="best")
     plt.grid(ls="dashed", alpha=0.7)
-    plt.xticks(range(1,  len(unet_bce)+1))
+    plt.xticks(n)
     plt.xlabel("Ensemble size")
     plt.ylabel("DSC")
-    plt.title(title)
-    plt.savefig(save_plot_folder + filename + ".png")
+    plt.title("Uncertainty Estimation of U-Net")
+    plt.savefig(save_plot_folder + "unet_dsc_vs_ensemble_size.png")
 
+    N = range(1, len(resunetplusplus_dice) + 1)
+    plt.figure(figsize=(8, 7))
+    plt.plot(N, resunetplusplus_dice,".-",label="Deep ensemble, DSC")
+    plt.plot(N, resunetplusplus_BCE, ".-",label="Deep ensemble, BCE")
+    plt.plot(N, resunetplusplus_dropout_dice, ".-", label="MC dropout, DSC")
+    plt.plot(N, resunetplusplus_dropout_BCE, ".-", label="MC dropout, BCE")
 
+    plt.legend(loc="best")
+    plt.grid(ls="dashed", alpha=0.7)
+    plt.xticks(N)
+    plt.xlabel("Ensemble size")
+    plt.ylabel("DSC")
+    plt.title("Uncertainty Estimation of ResUNet++")
+    plt.savefig(save_plot_folder + "resunet++_dsc_vs_ensemble_size.png")
 
 
 def run_ensembles(number):
@@ -270,32 +326,25 @@ def run_ensembles(number):
     )
 
     main_root = "/home/feliciaj/PolypSegmentation/"
-    save_folder = main_root + "/results/results_kvasir/ensembles_resunet++_BCE/" 
-    load_folder = main_root + "saved_models/resunet++_BCE/" 
-
-
+    save_folder = main_root + "/results/results_kvasir/ensembles_resunet++_BCE/"
+    load_folder = main_root + "saved_models/resunet++_BCE/"
+    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  
-    #model = UNet(in_channels=3, out_channels=1).to(device) 
+    model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)
+    # model = UNet(in_channels=3, out_channels=1).to(device)
     ensemble_size = number
     ensemble = DeepEnsemble(model, ensemble_size, device, load_folder)
     test_ensembles(ensemble, device, test_loader, save_folder)
 
-
     # print dice
     dice = get_dice(ensemble_size, model, test_loader, device, load_folder)
     print(f"Dice={dice}, ensemble size={number}")
-
-
+    """
     # make plot of all ensembles
     save_plot_folder = main_root + "/results/results_kvasir/plots/ensembles/"
-    filename = "unet_ensembles_vs_score"
-    title = "Different Deep Ensembles tested on Kvasir-SEG"
-
-    #plot_ensembles_vs_score(save_plot_folder, filename, title)
-
+    plot_ensembles_vs_score(save_plot_folder)
 
 
 if __name__ == "__main__":
-    number = int(sys.argv[1])
+    number = 1#int(sys.argv[1])
     run_ensembles(number)
