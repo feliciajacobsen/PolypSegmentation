@@ -308,6 +308,7 @@ def plot_ensembles_vs_score(save_plot_folder):
     plt.legend(loc="best")
     plt.grid(ls="dashed", alpha=0.7)
     plt.xticks(N)
+    plt.yticks(np.arange(0.35, 0.8, 0.05))
     plt.xlabel("Ensemble size")
     plt.ylabel("DSC")
     plt.title("Uncertainty Estimation of ResUNet++")
