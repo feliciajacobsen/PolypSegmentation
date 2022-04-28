@@ -218,7 +218,24 @@ def dice_list():
 
     resunetplusplus_dropout_dice = []
     
-    resunetplusplus_dropout_BCE = []
+    resunetplusplus_dropout_BCE = [
+        0.3917301728491076, 
+        0.3916995250953805, 
+        0.39210001195623595, 
+        0.3917620228568783, 
+        0.3914567962647908, 
+        0.3918167266812599, 
+        0.3913487937945471, 
+        0.39175347994074483, 
+        0.39149430853159234, 
+        0.39157202402106955, 
+        0.3915086573008246, 
+        0.3916418071079308, 
+        0.3917576828979201, 
+        0.3917245195165765, 
+        0.3918260351406787, 
+        0.3916288094669015
+    ]
 
 
     return unet_BCE, unet_dice, resunetplusplus_dice, resunetplusplus_BCE, unet_dropout_dice, unet_dropout_bce

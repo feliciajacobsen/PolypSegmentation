@@ -165,7 +165,7 @@ def test_MC_dropout(model, forward_passes, loader, device, load_folder, img_fold
     print(f"Dice={mean_dice} for N={forward_passes} forward passes")
 
 
-def plot_models_vs_dice(model, forward_passes, loader, device, load_folder, save_plot_path):
+def plot_models_vs_dice(model, forward_passes, loader, device, load_folder, save_plot_path, model_name):
 
     dice = []
     for passes in range(1, forward_passes+1):
@@ -189,9 +189,9 @@ def plot_models_vs_dice(model, forward_passes, loader, device, load_folder, save
     plt.xlabel("Number of forward passes")
     plt.ylabel("Score")
     plt.title(
-        f"MC droput with {forward_passes} number of U-Nets on Kvasir-SEG"
+        f"MC droput with {forward_passes} number of {mmodel_name} on Kvasir-SEG"
     )
-    plt.savefig(save_plot_path + f"unet_dropout_{forward_passes}_models.png")
+    plt.savefig(save_plot_path + f"{model_name}_dropout_{forward_passes}_models.png")
 
 
 if __name__ == "__main__":
@@ -236,10 +236,10 @@ if __name__ == "__main__":
 
     passes = 5
     img_folder = (
-        "/home/feliciaj/PolypSegmentation/results/results_kvasir/mc_dropout_unet_bce"
+        "/home/feliciaj/PolypSegmentation/results/results_kvasir/mc_dropout_resunet++_dice"
     )
     load_path = (
-        "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout_BCE/unet_dropout.pt"
+        "/home/feliciaj/PolypSegmentation/saved_models/resunet++_dropout_BCE/resunet++_dropout_1.pt"
     )
 
     """
@@ -255,9 +255,18 @@ if __name__ == "__main__":
 
     _, _, test_loader = loaders
     forward_passes = 16
-    model = UNet_dropout(3, 1).to(device)
+    model = ResUnetPlusPlus_dropout(3,1).to(device) #UNet_dropout(3, 1).to(device)
     load_folder = load_path
+    model_name = "Resunet++"
 
     test_MC_dropout(model, forward_passes, test_loader, device, load_folder, img_folder)
 
-    plot_models_vs_dice(model, forward_passes, test_loader, device, load_folder, save_plot_path)
+    plot_models_vs_dice(
+        model, 
+        forward_passes, 
+        test_loader, 
+        device, 
+        load_folder, 
+        save_plot_path, 
+        model_name,
+    )
