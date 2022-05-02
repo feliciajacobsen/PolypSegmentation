@@ -284,7 +284,7 @@ def plot_ensembles_vs_score(save_plot_folder):
     ) = dice_list()
 
     n = range(1, len(unet_BCE) + 1)
-    plt.figure(figsize=(8, 7))
+    plt.figure(figsize=(10, 7))
     plt.plot(n, unet_dice, ".-", label="Deep ensemble, DSC")
     plt.plot(n, unet_BCE, ".-", label="Deep ensemble,  BCE")
     plt.plot(n, unet_dropout_dice, ".-", label="MC dropout, DSC")
@@ -295,11 +295,11 @@ def plot_ensembles_vs_score(save_plot_folder):
     plt.xticks(n)
     plt.xlabel("Ensemble size")
     plt.ylabel("DSC")
-    plt.title("Uncertainty Estimation of U-Net")
+    plt.title("U-Net")
     plt.savefig(save_plot_folder + "unet_dsc_vs_ensemble_size.png")
 
     N = range(1, len(resunetplusplus_dice) + 1)
-    plt.figure(figsize=(8, 7))
+    plt.figure(figsize=(10, 7))
     plt.plot(N, resunetplusplus_dice,".-",label="Deep ensemble, DSC")
     plt.plot(N, resunetplusplus_BCE, ".-",label="Deep ensemble, BCE")
     plt.plot(N, resunetplusplus_dropout_dice, ".-", label="MC dropout, DSC")
@@ -311,7 +311,7 @@ def plot_ensembles_vs_score(save_plot_folder):
     plt.yticks(np.arange(0.35, 0.8, 0.05))
     plt.xlabel("Ensemble size")
     plt.ylabel("DSC")
-    plt.title("Uncertainty Estimation of ResUNet++")
+    plt.title("ResUNet++")
     plt.savefig(save_plot_folder + "resunet++_dsc_vs_ensemble_size.png")
 
 
