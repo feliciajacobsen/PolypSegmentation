@@ -5,6 +5,7 @@ import os
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 
 # local imports
 from unet import UNet
@@ -47,10 +48,8 @@ class DeepEnsemble(nn.Module):
 
         outputs = torch.stack(inputs)  # (ensemble_size, b, c, w, h)
         sigmoided = torch.sigmoid(outputs)  # convert to probabilities
-        mean = torch.mean(sigmoided, dim=0)  # take mean along stack dimension
-        variance = torch.var(
-            sigmoided, dim=0
-        ).double()  # torch.mean((sigmoided - mean) ** 2, dim=0).double()
+        mean = torch.mean(sigmoided, dim=0)  # take mean along stack dim
+        variance = torch.var(sigmoided, dim=0).double() # variance along stack dim
         normalized_variance = (variance - torch.min(variance)) / (
             torch.max(variance) - torch.min(variance)
         )
@@ -272,6 +271,8 @@ def dice_list():
 
 
 def plot_ensembles_vs_score(save_plot_folder):
+    sns.set()
+
     (
         unet_BCE,
         unet_dice,
@@ -291,7 +292,7 @@ def plot_ensembles_vs_score(save_plot_folder):
     plt.plot(n, unet_dropout_BCE, ".-", label="MC dropout BCE")
 
     plt.legend(loc="best")
-    plt.grid(ls="dashed", alpha=0.7)
+    #plt.grid(ls="dashed", alpha=0.7)
     plt.xticks(n)
     plt.xlabel("Ensemble size")
     plt.ylabel("DSC")
@@ -306,7 +307,7 @@ def plot_ensembles_vs_score(save_plot_folder):
     plt.plot(N, resunetplusplus_dropout_BCE, ".-", label="MC dropout, BCE")
 
     plt.legend(loc="best")
-    plt.grid(ls="dashed", alpha=0.7)
+    #plt.grid(ls="dashed", alpha=0.7)
     plt.xticks(N)
     plt.yticks(np.arange(0.35, 0.8, 0.05))
     plt.xlabel("Ensemble size")

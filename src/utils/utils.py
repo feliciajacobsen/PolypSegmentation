@@ -145,7 +145,7 @@ class EarlyStopping():
                 self.early_stop = True
 
 
-def save_grid(ims, folder, rows=None, cols=None):
+def save_grid(ims, folder, rows=None, cols=None, colorbar=False):
     if rows is None != cols is None:
         raise ValueError("Set either both rows and cols or neither.")
 
@@ -164,10 +164,11 @@ def save_grid(ims, folder, rows=None, cols=None):
         img = ax.imshow(im, cmap="turbo", vmin=im.min(), vmax=im.max())
         ax.set_axis_off()
         ax.set_aspect("equal") 
-   
-    fig.subplots_adjust(right=0.8)
-    cbar_ax = fig.add_axes([0.85, 0.15, 0.025, 0.7])
-    fig.colorbar(img, cax=cbar_ax, ticks=[0, 0.5, 1.0])
+    
+    if colorbar == True:
+        fig.subplots_adjust(right=0.8)
+        cbar_ax = fig.add_axes([0.85, 0.15, 0.025, 0.7])
+        fig.colorbar(img, cax=cbar_ax, ticks=[0, 0.5, 1.0])
     
     fig.savefig(folder, transparent=False)
 

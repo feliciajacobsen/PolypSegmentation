@@ -133,7 +133,7 @@ def train_validate(
         save_preds_as_imgs(
             val_loader,
             model,
-            folder="/home/feliciaj/data/Kvasir-SEG/" + model_name + "_BCE",
+            folder="/home/feliciaj/data/Kvasir-SEG/" + model_name,
             device=device,
         )
 

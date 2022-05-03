@@ -8,11 +8,12 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import seaborn as sns
 
 # import models
-from resunetplusplus import ResUnetPlusPlus, ResUnetPlusPlus_dropout
 from unet import UNet_dropout, UNet
-# from unet_vajira import UNet_dropout
+from resunetplusplus import ResUnetPlusPlus, ResUnetPlusPlus_dropout
+from trainer import train_validate
 
 # local imports
 from utils.dataloader import data_loaders
@@ -61,78 +62,6 @@ class MCD(nn.Module):
         normalized_variance = (variance - torch.min(variance)) / (torch.max(variance) - torch.min(variance))
 
         return mean, normalized_variance
-
-
-class MCDropoutSegmentation:
-    def __init__(self, device, loaders, droprate=0.1, lr=0.01):
-        self.device = device
-        self.lr = lr
-        self.loaders = loaders
-        self.train_loader, self.val_loader, self.test_loader = loaders
-        self.model = UNet_dropout(
-            in_channels=3, out_channels=1
-        ).to(device)  # UNet_dropout(in_channels=3, out_channels=1, droprate=droprate)
-        self.criterion = DiceLoss().to(device)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, factor=0.1, patience=20, min_lr=1e-6
-        )
-        self.loss_ = []
-        self.val_dice = []
-        self.val_iou = []
-
-    def train_n_models(
-        self, save_path, save_plot_path, fig_name, rates=[0, 0.1, 0.3, 0.5], plot=False
-    ):
-        """
-        save_path : str
-            path to where to save trained model and their dice scores
-        save_plot_path : str
-            path to where to store plot
-        fig_name : str
-            filename of plot
-        rates : list
-            list of floats
-        plot : boolean
-            if true, dice vs. epochs are saved.
-        """
-
-        self.save_path = save_path
-        train_loader = self.train_loader
-        val_loader = self.val_loader
-
-        unets = []
-        for rate in rates:
-            unets.append(
-                MCDropoutSegmentation(
-                    device=self.device, loaders=self.loaders, droprate=rate
-                )
-            )
-
-        # Save trained models
-        for idx, (rate, unet) in enumerate(zip(rates, unets)):
-            unet.train_model(save_path + f"unet_rate={rate}.pt", verbose=True)
-            # torch.save(unet.model, save_path + f"unet_rate={rate}.pt")
-            torch.save(unet.val_dice, save_path + f"unet_val_dices_rate={rate}.pt")
-
-        if plot:
-            plt.figure(figsize=(8, 7))
-            for idx, (rate, unet) in enumerate(zip(rates, unets)):
-                dices = torch.load(
-                    save_path + f"unet_val_dices_rate={rate}.pt",
-                    map_location=torch.device("cpu"),
-                )
-                if rate == 0:
-                    label = "U-Net no dropout"
-                else:
-                    label = f"U-Net dropout rate={rate:.1f}"
-                plt.plot(range(1, len(dices) + 1), dices, ".-", label=label)
-
-            plt.legend(loc="best")
-            plt.xlabel("Epochs")
-            plt.ylabel("Dice coefficient")
-            plt.title("Dice coefficient scores on Kvasir-SEG validation dataset")
-            plt.savefig(save_plot_path + f"{fig_name}.png")
 
 
 def save_images(batch, input, mean, variance, truth, img_folder):
