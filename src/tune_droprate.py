@@ -36,7 +36,7 @@ class DropoutClassifier:
         self.max_epoch = max_epoch
         self.droprate = droprate
         self.lr = lr
-        self.model = UNet_dropout(3, 1, droprate).to(device)
+        self.model = ResUnetPlusPlus_dropout(3,1,droprate).to(device) #UNet_dropout(3, 1, droprate).to(device)
         self.device = device
         self.criterion = nn.BCEWithLogitsLoss().to(device)  #DiceLoss().to(device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
@@ -68,7 +68,7 @@ class DropoutClassifier:
             dices.append(self.get_dice(self.model))
 
             if epoch == self.max_epoch - 1:
-                torch.save(dices, f"unet_dice_{self.droprate}.pt")
+                torch.save(dices, f"ResUNet++_bce_{self.droprate}.pt")
 
             print(f"Epoch {epoch+1}, loss: {self.loss_}")
     
@@ -116,29 +116,28 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     droprates = [0, 0.1, 0.3, 0.5]
-    """
+    
     # Save torch models
     for rate in droprates:
         model = DropoutClassifier(loaders=loaders, device=device, droprate=rate)
         model.fit()
-    """
+    
     # Load saved models to CPU
     sns.set()
     plt.figure(figsize=(10, 7))
     for rate in droprates:
-        dices = torch.load(f"unet_dice_{rate}.pt",
+        dices = torch.load(f"/home/feliciaj/PolypSegmentation/dropout_rates/ResUNet++_bce_{rate}.pt",
                     map_location=torch.device("cpu"),
                 )
         if rate == 0:
-            label = "U-Net no dropout"
+            label = "ResUNet++ no dropout"
         else:
-            label = f"U-Net dropout rate={rate:.1f}"
-        print(dices)
+            label = f"ResUNet++ dropout rate={rate:.1f}"
         plt.plot(range(1, 150+1), dices, ".-", label=label)
     #plt.ylim([50, 250])
     plt.legend(loc="best")
     plt.xlabel('Epochs')
     plt.ylabel('DSC')
-    plt.title('Validation DSC on Kvasir-SEG')
-    plt.savefig("/home/feliciaj/PolypSegmentation/results/results_kvasir/plots/MC_dropout/unet_droprates.png")
+    plt.title('Dropout ResUNet++ trained with BCE loss on validation Kvasir-SEG')
+    plt.savefig("/home/feliciaj/PolypSegmentation/results/results_kvasir/plots/MC_dropout/ResUNet++_bce_droprates.png")
     
