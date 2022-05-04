@@ -38,7 +38,7 @@ class DropoutClassifier:
         self.lr = lr
         self.model = ResUnetPlusPlus_dropout(in_channels=3, out_channels=1, droprate=droprate).to(device) #UNet_dropout(3, 1, droprate).to(device)
         self.device = device
-        self.criterion = nn.BCEWithLogitsLoss().to(device)  #DiceLoss().to(device)
+        self.criterion = DiceLoss().to(device) #nn.BCEWithLogitsLoss().to(device) 
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         self.loss_ = []
         self.test_error = []
@@ -68,7 +68,7 @@ class DropoutClassifier:
             dices.append(self.get_dice(self.model))
 
             if epoch == self.max_epoch - 1:
-                torch.save(dices, f"resunet_bce_{self.droprate}.pt")
+                torch.save(dices, f"resunet_dsc_{self.droprate}.pt")
 
             print(f"Epoch {epoch+1}, loss: {self.loss_}")
     
@@ -122,11 +122,12 @@ if __name__ == "__main__":
         model = DropoutClassifier(loaders=loaders, device=device, droprate=rate)
         model.fit()
     
+    
     # Load saved models to CPU
     sns.set()
     plt.figure(figsize=(10, 7))
     for rate in droprates:
-        dices = torch.load(f"/home/feliciaj/PolypSegmentation/dropout_rates/ResUNet++_bce_{rate}.pt",
+        dices = torch.load(f"/home/feliciaj/PolypSegmentation/dropout_rates/resunet_dsce_{rate}.pt",
                     map_location=torch.device("cpu"),
                 )
         if rate == 0:
@@ -138,6 +139,6 @@ if __name__ == "__main__":
     plt.legend(loc="best")
     plt.xlabel('Epochs')
     plt.ylabel('DSC')
-    plt.title('Dropout ResUNet++ trained with BCE loss on validation Kvasir-SEG')
-    plt.savefig("/home/feliciaj/PolypSegmentation/results/results_kvasir/plots/MC_dropout/ResUNet++_bce_droprates.png")
+    plt.title('Dropout ResUNet++ trained with DSC loss on validation Kvasir-SEG')
+    plt.savefig("/home/feliciaj/PolypSegmentation/results/results_kvasir/plots/MC_dropout/resunet++_dsc_droprates.png")
     
