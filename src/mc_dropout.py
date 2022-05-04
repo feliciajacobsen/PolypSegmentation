@@ -64,19 +64,22 @@ class MCD(nn.Module):
         return mean, normalized_variance
 
 
-def save_images(batch, input, mean, variance, truth, img_folder):
+def save_images(batch, input, mean, variance, truth, img_folder, grid=False):
     """
     Function saves images from the same batch in a grid.
     """
     torchvision.utils.save_image(mean, f"{img_folder}/pred_{batch}.png", nrow=5)
     torchvision.utils.save_image(truth, f"{img_folder}/mask_{batch}.png", nrow=5)
     torchvision.utils.save_image(input, f"{img_folder}/input_{batch}.png", nrow=5)
-    save_grid(
-        variance.permute(0, 2, 3, 1),
-        f"{img_folder}/heatmap_{batch}.png",
-        rows=5,
-        cols=5,
-    )
+    if grid==True:
+        save_grid(
+            variance.permute(0, 2, 3, 1),
+            f"{img_folder}/heatmap_{batch}.png",
+            rows=5,
+            cols=5,
+        )
+    else:
+        plt.imsave(f"{img_folder}/heatmap_{batch}.png", variance, cmap="turbo")
 
 
 def test_MC_dropout(model, forward_passes, loader, device, load_folder, img_folder):
@@ -153,7 +156,7 @@ if __name__ == "__main__":
     )
 
     loaders = data_loaders(
-        batch_size=25,
+        batch_size=1,
         train_transforms=train_transforms,
         val_transforms=standard_transforms(256, 256),
         num_workers=4,
@@ -161,31 +164,17 @@ if __name__ == "__main__":
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    obj = MCDropoutSegmentation(device, loaders, droprate=0.3, lr=0.01)
-
     passes = 16
     img_folder = (
         "/home/feliciaj/PolypSegmentation/results/results_kvasir/mc_dropout_resunet++_dice"
     )
-    load_path = (
+    load_folder = (
         "/home/feliciaj/PolypSegmentation/saved_models/resunet++_dropout_dice/resunet++_dropout_1.pt"
     )
-
-    """
-    # tain models with different dropout rates
-    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout_dice/"
-    rates = [0, 0.1, 0.3, 0.5]
-    fig_name = (
-        f"U-Net with dropout predicted on Kvasir-SEG validation data with rates={rates}"
-    )
-    obj.train_n_models(save_path, save_plot_path, fig_name, rates, True) # train model
-    obj.train_model(save_model_path="/home/feliciaj/PolypSegmentation/saved_models/vajira/unet")
-    """
 
     _, _, test_loader = loaders
     forward_passes = 16
     model = ResUnetPlusPlus_dropout(3,1).to(device) #UNet_dropout(3, 1).to(device)
-    load_folder = load_path
     model_name = "Resunet++"
 
     test_MC_dropout(model, forward_passes, test_loader, device, load_folder, img_folder)

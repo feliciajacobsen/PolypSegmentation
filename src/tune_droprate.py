@@ -36,7 +36,7 @@ class DropoutClassifier:
         self.max_epoch = max_epoch
         self.droprate = droprate
         self.lr = lr
-        self.model = ResUnetPlusPlus_dropout(3,1,droprate).to(device) #UNet_dropout(3, 1, droprate).to(device)
+        self.model = ResUnetPlusPlus_dropout(in_channels=3, out_channels=1, droprate=droprate).to(device) #UNet_dropout(3, 1, droprate).to(device)
         self.device = device
         self.criterion = nn.BCEWithLogitsLoss().to(device)  #DiceLoss().to(device)
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
@@ -68,7 +68,7 @@ class DropoutClassifier:
             dices.append(self.get_dice(self.model))
 
             if epoch == self.max_epoch - 1:
-                torch.save(dices, f"ResUNet++_bce_{self.droprate}.pt")
+                torch.save(dices, f"resunet_bce_{self.droprate}.pt")
 
             print(f"Epoch {epoch+1}, loss: {self.loss_}")
     
