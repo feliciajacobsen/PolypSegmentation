@@ -68,18 +68,21 @@ def save_images(batch, input, mean, variance, truth, img_folder, grid=False):
     """
     Function saves images from the same batch in a grid.
     """
-    torchvision.utils.save_image(mean, f"{img_folder}/pred_{batch}.png", nrow=5)
-    torchvision.utils.save_image(truth, f"{img_folder}/mask_{batch}.png", nrow=5)
-    torchvision.utils.save_image(input, f"{img_folder}/input_{batch}.png", nrow=5)
     if grid==True:
+        rows = 5
         save_grid(
             variance.permute(0, 2, 3, 1),
-            f"{img_folder}/heatmap_{batch}.png",
+            f"{img_folder}/heatmaps/heatmap_{batch}.png",
             rows=5,
             cols=5,
         )
     else:
-        plt.imsave(f"{img_folder}/heatmap_{batch}.png", variance, cmap="turbo")
+        rows = 1
+        plt.imsave(f"{img_folder}/heatmaps/heatmap_{batch}.png", variance, cmap="turbo")
+
+    torchvision.utils.save_image(mean, f"{img_folder}/preds/pred_{batch}.png", nrow=rows)
+    torchvision.utils.save_image(truth, f"{img_folder}/masks/mask_{batch}.png", nrow=rows)
+    torchvision.utils.save_image(input, f"{img_folder}/inputs/input_{batch}.png", nrow=rows)
 
 
 def test_MC_dropout(model, forward_passes, loader, device, load_folder, img_folder):
@@ -128,7 +131,7 @@ def plot_models_vs_dice(model, forward_passes, loader, device, load_folder, save
 
 if __name__ == "__main__":
     save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
-    save_plot_path = "/home/feliciaj/PolypSegmentation/results/results_kvasir/plots/MC_dropout/"
+    save_plot_path = "/home/feliciaj/PolypSegmentation/results/plots/MC_dropout/"
     max_epoch = 150
     rates = [0, 0.1, 0.2]
 
@@ -166,10 +169,10 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     passes = 16
     img_folder = (
-        "/home/feliciaj/PolypSegmentation/results/results_kvasir/mc_dropout_resunet++_dice"
+        "/home/feliciaj/PolypSegmentation/results/mc_dropout_resunet++_BCE"
     )
     load_folder = (
-        "/home/feliciaj/PolypSegmentation/saved_models/resunet++_dropout_dice/resunet++_dropout_1.pt"
+        "/home/feliciaj/PolypSegmentation/saved_models/resunet++_dropout_BCE/resunet++_dropout_1.pt"
     )
 
     _, _, test_loader = loaders
@@ -179,6 +182,7 @@ if __name__ == "__main__":
 
     test_MC_dropout(model, forward_passes, test_loader, device, load_folder, img_folder)
 
+    """
     plot_models_vs_dice(
         model, 
         forward_passes, 
@@ -188,3 +192,4 @@ if __name__ == "__main__":
         save_plot_path, 
         model_name,
     )
+    """

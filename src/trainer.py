@@ -140,15 +140,14 @@ def train_validate(
     if plot_loss:
         loss_plot_name = "loss_" + model_name
         plt.figure(figsize=(10, 7))
-        #plt.plot(train_epoch_loss, color="blue", label="train loss")
-        #plt.plot(val_epoch_loss, color="green", label="validataion loss")
-        plt.plot(dice, label="dice")
+        plt.plot(train_epoch_loss, color="blue", label="train loss")
+        plt.plot(val_epoch_loss, color="green", label="validataion loss")
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
         plt.title(model_name)
         plt.legend()
         plt.savefig(
-            f"/home/feliciaj/PolypSegmentation/results/results_kvasir/loss_plots/{loss_plot_name}.png"
+            f"/home/feliciaj/PolypSegmentation/results/loss_plots/{loss_plot_name}.png"
         )
 
 
@@ -169,7 +168,7 @@ def run_model(number):
     config["model_name"] = "resunet++_dropout" 
     config["save_folder"] = (
         "/home/feliciaj/PolypSegmentation/saved_models/"
-        + config["model_name"] + "_BCE/"
+        + config["model_name"] + "/"
     )
 
     if config["model_name"] == "unet":
@@ -210,7 +209,8 @@ def run_model(number):
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
     #optimizer = optim.AdamW(model.parameters(), lr=config["lr"])
     #optimizer = optim.SGD(model.parameters(), lr=config["lr"], momentum=0.9)
-
+    scheduler = None
+    """
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer, 
         T_0=20, 
@@ -218,6 +218,7 @@ def run_model(number):
         eta_min=1e-8, 
         verbose=True,
     )
+    """
     
 
     loaders = data_loaders(

@@ -116,18 +116,18 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     droprates = [0, 0.1, 0.3, 0.5]
-    
+    """
     # Save torch models
     for rate in droprates:
         model = DropoutClassifier(loaders=loaders, device=device, droprate=rate)
         model.fit()
-    
+    """
     
     # Load saved models to CPU
     sns.set()
     plt.figure(figsize=(10, 7))
     for rate in droprates:
-        dices = torch.load(f"/home/feliciaj/PolypSegmentation/dropout_rates/resunet_dsce_{rate}.pt",
+        dices = torch.load(f"/home/feliciaj/PolypSegmentation/dropout_rates/resunet_dsc_{rate}.pt",
                     map_location=torch.device("cpu"),
                 )
         if rate == 0:
@@ -140,5 +140,5 @@ if __name__ == "__main__":
     plt.xlabel('Epochs')
     plt.ylabel('DSC')
     plt.title('Dropout ResUNet++ trained with DSC loss on validation Kvasir-SEG')
-    plt.savefig("/home/feliciaj/PolypSegmentation/results/results_kvasir/plots/MC_dropout/resunet++_dsc_droprates.png")
+    plt.savefig("/home/feliciaj/PolypSegmentation/results/plots/MC_dropout/resunet++_dsc_droprates.png")
     

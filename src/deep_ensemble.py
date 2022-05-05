@@ -57,7 +57,7 @@ class DeepEnsemble(nn.Module):
         return mean, normalized_variance
 
 
-def test_ensembles(ensemble, device, loader, save_folder: str):
+def test_ensembles(ensemble, device, loader, save_folder: str, grid=False):
     """
     Function loads trained models and make prediction on data from loader.
     """
@@ -74,17 +74,24 @@ def test_ensembles(ensemble, device, loader, save_folder: str):
             variance = variance.cpu().detach()
 
             # save images to save_folder
+            if grid == True:
+                rows = 5
+                save_grid(
+                    variance.permute(0, 2, 3, 1),
+                    f"{save_folder}/heatmaps/heatmap_{batch}.png",
+                    rows=5,
+                    cols=5,
+                )
+            else:
+                rows = 1
+                plt.imsave(f"{save_folder}/heatmaps/heatmap_{batch}.png", variance, cmap="turbo")
+
             torchvision.utils.save_image(
-                pred, f"{save_folder}/pred_{batch}.png", nrow=5
+                pred, f"{save_folder}/preds/pred_{batch}.png", nrow=rows
             )
-            torchvision.utils.save_image(y, f"{save_folder}/mask_{batch}.png", nrow=5)
-            torchvision.utils.save_image(x, f"{save_folder}/input_{batch}.png", nrow=5)
-            save_grid(
-                variance.permute(0, 2, 3, 1),
-                f"{save_folder}/heatmap_{batch}.png",
-                rows=5,
-                cols=5,
-            )
+            torchvision.utils.save_image(y, f"{save_folder}/masks/mask_{batch}.png", nrow=rows)
+            torchvision.utils.save_image(x, f"{save_folder}/inputs/input_{batch}.png", nrow=rows)
+            
     print(f"IoU score: {iou/len(loader)}")
     print(f"Dice score: {dice/len(loader)}")
 
@@ -328,23 +335,28 @@ def run_ensembles(number):
     )
 
     main_root = "/home/feliciaj/PolypSegmentation/"
-    save_folder = main_root + "/results/results_kvasir/ensembles_resunet++_BCE/"
+    save_folder = main_root + "/results/ensembles_resunet++_BCE/"
     load_folder = main_root + "saved_models/resunet++_BCE/"
-    """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)
-    # model = UNet(in_channels=3, out_channels=1).to(device)
+    model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  # UNet(3, 1).to(device)
     ensemble_size = number
+    
+    # save images and predictions
+   
     ensemble = DeepEnsemble(model, ensemble_size, device, load_folder)
     test_ensembles(ensemble, device, test_loader, save_folder)
 
+    """
     # print dice
     dice = get_dice(ensemble_size, model, test_loader, device, load_folder)
     print(f"Dice={dice}, ensemble size={number}")
     """
+
+    """
     # make plot of all ensembles
-    save_plot_folder = main_root + "/results/results_kvasir/plots/ensembles/"
+    save_plot_folder = main_root + "/results/plots/ensembles/"
     plot_ensembles_vs_score(save_plot_folder)
+    """
 
 
 if __name__ == "__main__":

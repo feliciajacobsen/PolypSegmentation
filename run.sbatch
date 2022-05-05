@@ -28,4 +28,4 @@ srun nvidia-smi
 hostname
 # Example of sourcing prebuilt python venv
 # . /home/<username>/py38-venv/bin/activate
-srun python3 /home/feliciaj/PolypSegmentation/src/tune_droprate.py
+srun python3 /home/feliciaj/PolypSegmentation/src/mc_dropout.py
