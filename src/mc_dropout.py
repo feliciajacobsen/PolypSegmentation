@@ -92,7 +92,7 @@ def test_MC_dropout(model, forward_passes, loader, device, load_folder, img_fold
         y = y.to(device).unsqueeze(1)
         ensemble = MCD(model, forward_passes, device, load_folder)
         prob, var = ensemble(x)
-        var = var.cpu().detach()
+        var = var.cpu().detach().squeeze(0).squeeze(0)
         pred = (prob > 0.5).float()
         dice += dice_coef(pred, y)
         save_images(batch, x, pred, var, y, img_folder)
@@ -101,7 +101,6 @@ def test_MC_dropout(model, forward_passes, loader, device, load_folder, img_fold
 
 
 def plot_models_vs_dice(model, forward_passes, loader, device, load_folder, save_plot_path, model_name):
-
     dice = []
     for passes in range(1, forward_passes+1):
         running_dice = 0
@@ -177,12 +176,13 @@ if __name__ == "__main__":
 
     _, _, test_loader = loaders
     forward_passes = 16
-    model = ResUnetPlusPlus_dropout(3,1).to(device) #UNet_dropout(3, 1).to(device)
-    model_name = "Resunet++"
+    model = ResUnetPlusPlus_dropout(3,1).to(device) #UNet_dropout(3, 1).to(device) 
+    
 
     test_MC_dropout(model, forward_passes, test_loader, device, load_folder, img_folder)
 
     """
+    model_name = "Resunet++"
     plot_models_vs_dice(
         model, 
         forward_passes, 
