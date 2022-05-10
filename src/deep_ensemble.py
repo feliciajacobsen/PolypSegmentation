@@ -10,7 +10,7 @@ import seaborn as sns
 # local imports
 from unet import UNet
 from resunetplusplus import ResUnetPlusPlus
-from utils.dataloader import data_loaders, etis_larib_loader, cvc_clinic_loader
+from utils.dataloader import data_loaders
 from utils.utils import save_grid, standard_transforms, get_class_weights
 from utils.metrics import dice_coef, iou_score
 
@@ -71,7 +71,7 @@ def test_ensembles(ensemble, device, loader, save_folder: str, grid=False):
             pred = (prob > 0.5).float()
             dice += dice_coef(pred, y)
             iou += iou_score(pred, y)
-            variance = variance.cpu().detach()
+            variance = variance.cpu().detach().squeeze(0).squeeze(0)
 
             # save images to save_folder
             if grid == True:
@@ -335,30 +335,29 @@ def run_ensembles(number):
     )
 
     main_root = "/home/feliciaj/PolypSegmentation/"
-    save_folder = main_root + "/results/ensembles_resunet++_BCE/"
-    load_folder = main_root + "saved_models/resunet++_BCE/"
+    save_folder = main_root + "/results/ensembles_unet_BCE/"
+    load_folder = main_root + "saved_models/unet_BCE/"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  # UNet(3, 1).to(device)
+    model = UNet(3, 1).to(device) #ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  
     ensemble_size = number
     
     # save images and predictions
-   
     ensemble = DeepEnsemble(model, ensemble_size, device, load_folder)
-    test_ensembles(ensemble, device, test_loader, save_folder)
+    #test_ensembles(ensemble, device, test_loader, save_folder)
 
-    """
+    
     # print dice
     dice = get_dice(ensemble_size, model, test_loader, device, load_folder)
     print(f"Dice={dice}, ensemble size={number}")
-    """
+    
 
     """
-    # make plot of all ensembles
+    # make plot from scores of all ensembles
     save_plot_folder = main_root + "/results/plots/ensembles/"
     plot_ensembles_vs_score(save_plot_folder)
     """
 
 
 if __name__ == "__main__":
-    number = 1#int(sys.argv[1])
+    number = 16#int(sys.argv[1])
     run_ensembles(number)
