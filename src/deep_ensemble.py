@@ -96,7 +96,7 @@ def test_ensembles(ensemble, device, loader, save_folder: str, grid=False):
     print(f"Dice score: {dice/len(loader)}")
 
 
-def get_dice(ensemble_size, model, loader, device, load_folder):
+def get_dice(ensemble_size, model, loader, device, load_folder: str):
     ensemble = DeepEnsemble(
         model=model, ensemble_size=ensemble_size, device=device, load_folder=load_folder
     )
@@ -113,6 +113,11 @@ def get_dice(ensemble_size, model, loader, device, load_folder):
 
 
 def dice_list():
+    """
+    This function only contains raw data from running 
+    mc dropout- and deep ensemble pipeline.
+    """
+
     unet_BCE = [
         0.7659695108432987,
         0.7524669674465139,
@@ -335,15 +340,15 @@ def run_ensembles(number):
     )
 
     main_root = "/home/feliciaj/PolypSegmentation/"
-    save_folder = main_root + "/results/ensembles_unet_BCE/"
-    load_folder = main_root + "saved_models/unet_BCE/"
+    save_folder = main_root + "/results/ensembles_resunet++_BCE/"
+    load_folder = main_root + "saved_models/resunet++_BCE/"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = UNet(3, 1).to(device) #ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  
+    model = ResUnetPlusPlus(in_channels=3, out_channels=1).to(device)  #UNet(3, 1).to(device)s
     ensemble_size = number
     
     # save images and predictions
     ensemble = DeepEnsemble(model, ensemble_size, device, load_folder)
-    #test_ensembles(ensemble, device, test_loader, save_folder)
+    test_ensembles(ensemble, device, test_loader, save_folder)
 
     
     # print dice
@@ -351,11 +356,10 @@ def run_ensembles(number):
     print(f"Dice={dice}, ensemble size={number}")
     
 
-    """
     # make plot from scores of all ensembles
     save_plot_folder = main_root + "/results/plots/ensembles/"
     plot_ensembles_vs_score(save_plot_folder)
-    """
+
 
 
 if __name__ == "__main__":

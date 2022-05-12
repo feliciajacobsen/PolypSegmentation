@@ -89,7 +89,7 @@ class DropoutClassifier:
         return dice/len(val_loader)
 
 
-if __name__ == "__main__":
+def main():
     train_transforms = A.Compose(
         [
             A.Resize(height=256, width=256),
@@ -116,12 +116,11 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     droprates = [0, 0.1, 0.3, 0.5]
-    """
+    
     # Save torch models
     for rate in droprates:
         model = DropoutClassifier(loaders=loaders, device=device, droprate=rate)
         model.fit()
-    """
     
     # Load saved models to CPU
     sns.set()
@@ -135,10 +134,16 @@ if __name__ == "__main__":
         else:
             label = f"ResUNet++ dropout rate={rate:.1f}"
         plt.plot(range(1, 150+1), dices, ".-", label=label)
-    #plt.ylim([50, 250])
+  
     plt.legend(loc="best")
     plt.xlabel('Epochs')
     plt.ylabel('DSC')
     plt.title('Dropout ResUNet++ trained with DSC loss on validation Kvasir-SEG')
     plt.savefig("/home/feliciaj/PolypSegmentation/results/plots/MC_dropout/resunet++_dsc_droprates.png")
+
+
+
+if __name__ == "__main__":
+    main()
+    
     

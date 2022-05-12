@@ -167,7 +167,7 @@ class UNet_dropout(nn.Module):
         # Bottleneck
         self.bottleneck = Downsample(512, 512)
 
-        # Upsample Image
+        # Upsample image
         self.up1 = Upsample(
             1024, 256
         )  # output channel here is half as large as input channel in next block due to skip connections
@@ -193,6 +193,7 @@ class UNet_dropout(nn.Module):
 
 
 def test():
+    """ simple test function """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     x = torch.randn((3, 1, 160, 160)).to(device)
     model = UNet(in_channels=1, out_channels=1).to(device)

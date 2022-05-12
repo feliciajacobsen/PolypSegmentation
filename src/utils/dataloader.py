@@ -10,7 +10,6 @@ class KvasirSEGDataset(Dataset):
     """
     Class provides with image and mask, or alternatively
     give an transformed/augmented version of these.
-
     """
     def __init__(self, image_dir, mask_dir, transform=None):
         self.image_dir = image_dir

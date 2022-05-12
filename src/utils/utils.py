@@ -6,7 +6,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-
+# local imports
 from utils.metrics import dice_coef, iou_score
 from utils.dataloader import data_loaders
 
@@ -42,9 +42,6 @@ def get_class_weights(loader):
 
     return num_zeros/len(loader), num_ones/len(loader)
         
-        
-
-
 
 def check_scores(loader, model, device, criterion):
     """
@@ -157,8 +154,6 @@ def save_grid(ims, folder, rows=None, cols=None, colorbar=False):
         fig,axarr = plt.subplots(1, rows, figsize=(10,8))
     else:
         fig,axarr = plt.subplots(rows, cols, figsize=(10,8))
-
-    #fig.subplots_adjust(wspace=0, hspace=0)
 
     for ax,im in zip(axarr.ravel(), ims):
         img = ax.imshow(im, cmap="turbo", vmin=im.min(), vmax=im.max())

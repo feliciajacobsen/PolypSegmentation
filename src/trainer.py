@@ -207,8 +207,7 @@ def run_model(number):
     #criterion = DiceLoss()  # Sigmoid layer and Dice loss
 
     optimizer = optim.Adam(model.parameters(), lr=config["lr"])
-    #optimizer = optim.AdamW(model.parameters(), lr=config["lr"])
-    #optimizer = optim.SGD(model.parameters(), lr=config["lr"], momentum=0.9)
+    
     scheduler = None
     """
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
@@ -220,7 +219,6 @@ def run_model(number):
     )
     """
     
-
     loaders = data_loaders(
         batch_size=config["batch_size"],
         train_transforms=train_transforms,
