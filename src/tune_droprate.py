@@ -117,7 +117,7 @@ def main():
 
     droprates = [0, 0.1, 0.3, 0.5]
     
-    # Save torch models
+    # Save models
     for rate in droprates:
         model = DropoutClassifier(loaders=loaders, device=device, droprate=rate)
         model.fit()

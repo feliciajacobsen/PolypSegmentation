@@ -125,14 +125,10 @@ def plot_models_vs_dice(model, forward_passes, loader, device, load_folder, save
     plt.title(
         f"MC droput with {forward_passes} number of {model_name} on Kvasir-SEG"
     )
-    plt.savefig(save_plot_path + f"{model_name}_dropout_{forward_passes}_models.png")
+    #plt.savefig(save_plot_path + f"{model_name}_dropout_{forward_passes}_models.png")
 
 
 if __name__ == "__main__":
-    save_path = "/home/feliciaj/PolypSegmentation/saved_models/unet_dropout/"
-    save_plot_path = "/home/feliciaj/PolypSegmentation/results/plots/MC_dropout/"
-    max_epoch = 150
-    rates = [0, 0.1, 0.2]
 
     train_transforms = A.Compose(
         [
@@ -165,24 +161,19 @@ if __name__ == "__main__":
         pin_memory=True,
     )
 
+    # Define input values
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    passes = 16
-    img_folder = (
-        "/home/feliciaj/PolypSegmentation/results/mc_dropout_resunet++_BCE"
-    )
-    load_folder = (
-        "/home/feliciaj/PolypSegmentation/saved_models/resunet++_dropout_BCE/resunet++_dropout_1.pt"
-    )
-
+    save_plot_path = "/home/feliciaj/PolypSegmentation/results/plots/MC_dropout/"
+    img_folder = ("/home/feliciaj/PolypSegmentation/results/mc_dropout_resunet++_BCE")
+    load_folder = ( "/home/feliciaj/PolypSegmentation/saved_models/resunet++_dropout_BCE_2/resunet++_dropout_1.pt")
     _, _, test_loader = loaders
     forward_passes = 16
     model = ResUnetPlusPlus_dropout(3,1).to(device) #UNet_dropout(3, 1).to(device) 
     
-
-    test_MC_dropout(model, forward_passes, test_loader, device, load_folder, img_folder)
-
-    """
-    model_name = "Resunet++"
+    # Predict, save results and print Dice
+    #test_MC_dropout(model, forward_passes, test_loader, device, load_folder, img_folder)
+    
+    model_name = "ResUNet++"
     plot_models_vs_dice(
         model, 
         forward_passes, 
@@ -192,4 +183,4 @@ if __name__ == "__main__":
         save_plot_path, 
         model_name,
     )
-    """
+    

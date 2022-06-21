@@ -39,7 +39,8 @@ class DiceLoss(nn.Module):
         intersection = (pred*target).flatten(1).sum(1)
         total = pred.flatten(1).sum(1) + target.flatten(1).sum(1)
 
-        dice = (2.0 * intersection + eps) / (total + intersection + eps)
+        #dice = (2.0 * intersection + eps) / (total + intersection + eps)
+        dice = (2.0 * intersection + eps) / (total + eps)
 
         return 1 - torch.mean(dice, dim=0)
 

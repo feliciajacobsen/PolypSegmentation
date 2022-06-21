@@ -40,7 +40,7 @@ def train_model(loader, model, device, optimizer, criterion, scheduler, epoch):
     """
 
     tqdm_loader = tqdm(loader)  # make progress bar
-    scaler = torch.cuda.amp.GradScaler()
+    scaler = torch.cuda.amp.GradScaler() # set scaler
 
     model.train()
     losses = []
@@ -48,7 +48,7 @@ def train_model(loader, model, device, optimizer, criterion, scheduler, epoch):
         # move data and masks to same device as computed gradients
         data = data.to(device=device)
         # add channel dimension
-        targets = targets.float().unsqueeze(1).to(device=device)
+        targets = targets.unsqueeze(1).to(device=device)
 
         # forward
         with torch.cuda.amp.autocast():
@@ -157,7 +157,7 @@ def run_model(number):
     config["device"] = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     config["plot_loss"] = False # set to true if we want to plot loss
     config["early_stopping"] = None
-    config["num_epochs"] = 150
+    config["num_epochs"] = 90
     config["in_channels"] = 3
     config["numcl"] = 1  # no of classes/output channels
     config["batch_size"] = 32
